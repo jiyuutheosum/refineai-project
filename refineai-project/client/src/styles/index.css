@@ -1,12 +1,471 @@
-body {
-  margin: 0;
-  padding: 0;
-  font-family: Inter;
+:root {
+  --color-primary: #646cff;
+  --color-primary-foreground: #ffffff;
+  --color-foreground: rgba(255, 255, 255, 0.87);
+  --color-muted: rgba(255, 255, 255, 0.1);
+  --color-card: #1a1a1a;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-error: #ff6b6b;
+  --color-success: #51cf66;
+  --color-warning: #fcc419;
+
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: var(--color-foreground);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
-  line-height: normal;
-  font-family: inherit;
-  margin: unset;
 }
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+a {
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: inherit;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #535bf2;
+}
+
+h1 {
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 1.25em;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--color-card);
+  color: var(--color-foreground);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+button:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-muted);
+}
+
+button:focus,
+button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.bg-card {
+  background-color: var(--color-card);
+}
+
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.bg-primary\/10 {
+  background-color: rgba(100, 108, 255, 0.1);
+}
+
+.bg-muted {
+  background-color: var(--color-muted);
+}
+
+.text-foreground {
+  color: var(--color-foreground);
+}
+
+.text-primary-foreground {
+  color: var(--color-primary-foreground);
+}
+
+.border-border {
+  border-color: var(--color-border);
+}
+
+.shadow-elevation-1 {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.shadow-elevation-2 {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+.font-heading {
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.text-xl {
+  font-size: 1.25rem;
+}
+
+.text-lg {
+  font-size: 1.125rem;
+}
+
+.text-base {
+  font-size: 1rem;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.opacity-50 {
+  opacity: 0.5;
+}
+
+.opacity-70 {
+  opacity: 0.7;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
+
+.sticky {
+  position: sticky;
+}
+
+.top-0 {
+  top: 0;
+}
+
+.z-\[100\] {
+  z-index: 100;
+}
+
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.rounded-2xl {
+  border-radius: 1rem;
+}
+
+.border {
+  border: 1px solid;
+}
+
+.border-t {
+  border-top: 1px solid;
+}
+
+.border-dashed {
+  border-style: dashed;
+}
+
+.border-2 {
+  border-width: 2px;
+}
+
+@media (max-width: 767px) {
+  .md\:hidden {
+    display: flex;
+  }
+
+  .md\:flex {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .md\:flex {
+    display: flex;
+  }
+
+  .md\:hidden {
+    display: none;
+  }
+
+  .md\:px-6 {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .md\:px-8 {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .md\:py-8 {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  .md\:py-12 {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
+  .md\:p-6 {
+    padding: 1.5rem;
+  }
+
+  .md\:p-8 {
+    padding: 2rem;
+  }
+
+  .md\:mb-4 {
+    margin-bottom: 1rem;
+  }
+
+  .md\:mb-6 {
+    margin-bottom: 1.5rem;
+  }
+
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .md\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .md\:gap-4 {
+    gap: 1rem;
+  }
+
+  .md\:gap-6 {
+    gap: 1.5rem;
+  }
+
+  .md\:gap-8 {
+    gap: 2rem;
+  }
+
+  .md\:text-lg {
+    font-size: 1.125rem;
+  }
+
+  .md\:text-xl {
+    font-size: 1.25rem;
+  }
+
+  .md\:text-2xl {
+    font-size: 1.5rem;
+  }
+
+  .md\:text-3xl {
+    font-size: 1.875rem;
+  }
+
+  .md\:text-4xl {
+    font-size: 2.25rem;
+  }
+
+  .md\:space-y-4 > * + * {
+    margin-top: 1rem;
+  }
+
+  .md\:space-y-5 > * + * {
+    margin-top: 1.25rem;
+  }
+
+  .md\:space-y-6 > * + * {
+    margin-top: 1.5rem;
+  }
+
+  .md\:space-y-8 > * + * {
+    margin-top: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .lg\:flex {
+    display: flex;
+  }
+
+  .lg\:hidden {
+    display: none;
+  }
+
+  .lg\:px-8 {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .lg\:py-12 {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
+  .lg\:py-16 {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+
+  .lg\:p-6 {
+    padding: 1.5rem;
+  }
+
+  .lg\:p-8 {
+    padding: 2rem;
+  }
+
+  .lg\:mb-6 {
+    margin-bottom: 1.5rem;
+  }
+
+  .lg\:col-span-1 {
+    grid-column: span 1 / span 1;
+  }
+
+  .lg\:col-span-2 {
+    grid-column: span 2 / span 2;
+  }
+
+  .lg\:col-span-3 {
+    grid-column: span 3 / span 3;
+  }
+
+  .lg\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lg\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .lg\:gap-4 {
+    gap: 1rem;
+  }
+
+  .lg\:gap-6 {
+    gap: 1.5rem;
+  }
+
+  .lg\:gap-8 {
+    gap: 2rem;
+  }
+
+  .lg\:text-3xl {
+    font-size: 1.875rem;
+  }
+
+  .lg\:text-4xl {
+    font-size: 2.25rem;
+  }
+
+  .lg\:text-5xl {
+    font-size: 3rem;
+  }
+
+  .lg\:space-y-4 > * + * {
+    margin-top: 1rem;
+  }
+
+  .lg\:space-y-6 > * + * {
+    margin-top: 1.5rem;
+  }
+
+  .lg\:space-y-8 > * + * {
+    margin-top: 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .xl\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .xl\:px-12 {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+.muted-foreground {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.h-16 {
+  height: 4rem;
+}
+
+.h-10 {
+  height: 2.5rem;
+}
+
+.w-10 {
+  width: 2.5rem;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-center {
+  text-align: center;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-primary: #646cff;
+    --color-foreground: #213547;
+    --color-muted: rgba(0, 0, 0, 0.05);
+    --color-card: #ffffff;
+    --color-border: rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+  }
+
+  a:hover {
+    color: #747bff;
+  }
+}
+

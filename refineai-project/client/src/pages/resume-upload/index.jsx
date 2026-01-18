@@ -154,7 +154,7 @@ const ResumeUpload = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen w-full bg-card">
       <Header />
       <ProgressIndicator workflowState={workflowState} />
       {selectedFile && (
@@ -169,20 +169,24 @@ const ResumeUpload = () => {
           onReupload={handleReupload}
         />
       )}
-      <main className="container mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12 lg:py-16">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 md:mb-12 lg:mb-16">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold text-foreground mb-4 md:mb-6">
-              Upload Your Resume
-            </h1>
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              Get AI-powered educational feedback to improve your resume. Upload your file to begin the analysis process.
-            </p>
-          </div>
 
-          {!isProcessing ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-10 lg:gap-12">
-              <div className="lg:col-span-2 space-y-6 md:space-y-8">
+      {!isProcessing ? (
+        <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-8 md:py-12 lg:py-16">
+          <div className="w-full max-w-6xl mx-auto">
+            {/* Centered Header Section */}
+            <div className="text-center mb-12 md:mb-16">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold text-foreground mb-4 md:mb-6">
+                Upload Your Resume
+              </h1>
+              <p className="text-base md:text-lg text-foreground/70 max-w-3xl mx-auto">
+                Get AI-powered educational feedback to improve your resume. Upload your file to begin the analysis process.
+              </p>
+            </div>
+
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-10 lg:gap-12 mb-12 md:mb-16">
+              {/* Left Column - Upload Zone */}
+              <div className="lg:col-span-2 flex flex-col gap-6">
                 <UploadZone 
                   onFileSelect={handleFileSelect}
                   isProcessing={isProcessing}
@@ -194,34 +198,44 @@ const ResumeUpload = () => {
                     message={validationState?.message}
                   />
                 )}
-
-                <FileRequirements />
               </div>
 
+              {/* Right Column - How It Works */}
               <div className="lg:col-span-1">
                 <InfoPanel />
               </div>
             </div>
-          ) : (
-            <div className="max-w-2xl mx-auto">
-              <ProcessingIndicator 
-                fileName={selectedFile?.fileName}
-                progress={processingProgress}
-              />
 
-              <div className="mt-8 text-center">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleReupload}
-                >
-                  Cancel Upload
-                </Button>
-              </div>
+            {/* File Requirements - Full Width Below */}
+            <div className="border-t border-border pt-12 md:pt-16">
+              <h2 className="text-2xl md:text-3xl font-heading font-bold text-foreground mb-8 text-center">
+                File Requirements
+              </h2>
+              <FileRequirements />
             </div>
-          )}
-        </div>
-      </main>
+          </div>
+        </main>
+      ) : (
+        <main className="flex-1 w-full px-4 py-8 md:py-12 flex items-center justify-center">
+          <div className="w-full max-w-2xl mx-auto">
+            <ProcessingIndicator 
+              fileName={selectedFile?.fileName}
+              progress={processingProgress}
+            />
+
+            <div className="mt-8 text-center">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleReupload}
+              >
+                Cancel Upload
+              </Button>
+            </div>
+          </div>
+        </main>
+      )}
+
       <HelpContext helpContent={helpContent} />
     </div>
   );
