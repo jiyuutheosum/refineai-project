@@ -1,4 +1,9 @@
+/* ============================================================================
+   ROOT VARIABLES & GLOBAL SETTINGS
+   ============================================================================ */
+
 :root {
+  /* Color Palette */
   --color-primary: #646cff;
   --color-primary-foreground: #ffffff;
   --color-foreground: rgba(255, 255, 255, 0.87);
@@ -9,11 +14,13 @@
   --color-success: #51cf66;
   --color-warning: #fcc419;
 
+  /* Typography */
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 1.5;
   font-weight: 400;
 
+  /* Theme & Rendering */
   color-scheme: light dark;
   color: var(--color-foreground);
   background-color: #242424;
@@ -23,6 +30,11 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+
+/* ============================================================================
+   RESET & BASE STYLES
+   ============================================================================ */
 
 * {
   margin: 0;
@@ -41,6 +53,11 @@ body {
   min-width: 320px;
   overflow-x: hidden;
 }
+
+
+/* ============================================================================
+   BASE ELEMENTS
+   ============================================================================ */
 
 a {
   font-weight: 500;
@@ -93,6 +110,11 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+
+/* ============================================================================
+   BACKGROUND UTILITIES
+   ============================================================================ */
+
 .bg-card {
   background-color: var(--color-card);
 }
@@ -109,6 +131,11 @@ button:focus-visible {
   background-color: var(--color-muted);
 }
 
+
+/* ============================================================================
+   TEXT & COLOR UTILITIES
+   ============================================================================ */
+
 .text-foreground {
   color: var(--color-foreground);
 }
@@ -117,17 +144,22 @@ button:focus-visible {
   color: var(--color-primary-foreground);
 }
 
-.border-border {
-  border-color: var(--color-border);
+.text-left {
+  text-align: left;
 }
 
-.shadow-elevation-1 {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+.text-center {
+  text-align: center;
 }
 
-.shadow-elevation-2 {
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
+.muted-foreground {
+  color: rgba(255, 255, 255, 0.7);
 }
+
+
+/* ============================================================================
+   FONT UTILITIES
+   ============================================================================ */
 
 .font-heading {
   font-family: inherit;
@@ -162,6 +194,52 @@ button:focus-visible {
   font-size: 0.75rem;
 }
 
+
+/* ============================================================================
+   BORDER & SHADOW UTILITIES
+   ============================================================================ */
+
+.border-border {
+  border-color: var(--color-border);
+}
+
+.border {
+  border: 1px solid;
+}
+
+.border-t {
+  border-top: 1px solid;
+}
+
+.border-dashed {
+  border-style: dashed;
+}
+
+.border-2 {
+  border-width: 2px;
+}
+
+.shadow-elevation-1 {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.shadow-elevation-2 {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+
+/* ============================================================================
+   LAYOUT & DISPLAY UTILITIES
+   ============================================================================ */
+
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.rounded-2xl {
+  border-radius: 1rem;
+}
+
 .opacity-50 {
   opacity: 0.5;
 }
@@ -186,30 +264,25 @@ button:focus-visible {
   z-index: 100;
 }
 
-.rounded-lg {
-  border-radius: 0.5rem;
+.h-16 {
+  height: 4rem;
 }
 
-.rounded-2xl {
-  border-radius: 1rem;
+.h-10 {
+  height: 2.5rem;
 }
 
-.border {
-  border: 1px solid;
+.w-10 {
+  width: 2.5rem;
 }
 
-.border-t {
-  border-top: 1px solid;
-}
 
-.border-dashed {
-  border-style: dashed;
-}
 
-.border-2 {
-  border-width: 2px;
-}
+/* ============================================================================
+   RESPONSIVE MEDIA QUERIES
+   ============================================================================ */
 
+/* ---------- Mobile (max 767px) ---------- */
 @media (max-width: 767px) {
   .md\:hidden {
     display: flex;
@@ -220,6 +293,7 @@ button:focus-visible {
   }
 }
 
+/* ---------- Tablet (min 768px) ---------- */
 @media (min-width: 768px) {
   .md\:flex {
     display: flex;
@@ -322,6 +396,7 @@ button:focus-visible {
   }
 }
 
+/* ---------- Desktop (min 1024px) ---------- */
 @media (min-width: 1024px) {
   .lg\:flex {
     display: flex;
@@ -419,6 +494,7 @@ button:focus-visible {
   }
 }
 
+/* ---------- Wide Desktop (min 1280px) ---------- */
 @media (min-width: 1280px) {
   .xl\:grid-cols-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -430,29 +506,9 @@ button:focus-visible {
   }
 }
 
-.muted-foreground {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.h-16 {
-  height: 4rem;
-}
-
-.h-10 {
-  height: 2.5rem;
-}
-
-.w-10 {
-  width: 2.5rem;
-}
-
-.text-left {
-  text-align: left;
-}
-
-.text-center {
-  text-align: center;
-}
+/* ============================================================================
+   COLOR SCHEME PREFERENCES
+   ============================================================================ */
 
 @media (prefers-color-scheme: light) {
   :root {
@@ -468,4 +524,6 @@ button:focus-visible {
     color: #747bff;
   }
 }
+
+/* ============================================================================ */
 

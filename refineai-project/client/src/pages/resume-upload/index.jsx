@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { WorkflowContext } from '../../App';
 import Header from '../../components/ui/Header';
 import ProgressIndicator from '../../components/ui/ProgressIndicator';
 import FileStatus from '../../components/ui/FileStatus';
@@ -13,13 +14,11 @@ import Button from '../../components/ui/Button';
 
 const ResumeUpload = () => {
   const navigate = useNavigate();
+  const workflowContext = useContext(WorkflowContext);
   const [selectedFile, setSelectedFile] = useState(null);
   const [validationState, setValidationState] = useState({ type: '', message: '' });
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
-  const [workflowState, setWorkflowState] = useState({
-    completedPhases: []
-  });
 
   const validateFile = (file) => {
     const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -88,10 +87,9 @@ const ResumeUpload = () => {
       if (progress >= 100) {
         clearInterval(interval);
         setTimeout(() => {
-          setWorkflowState(prev => ({
-            ...prev,
-            completedPhases: [...prev?.completedPhases, '/resume-upload']
-          }));
+          if (workflowContext) {
+            workflowContext.markPhaseComplete('/resume-upload');
+          }
           navigate('/resume-analysis');
         }, 500);
       }
@@ -156,7 +154,7 @@ const ResumeUpload = () => {
   return (
     <div className="flex flex-col min-h-screen w-full bg-card">
       <Header />
-      <ProgressIndicator workflowState={workflowState} />
+      <ProgressIndicator workflowState={workflowContext?.workflowState || {}} />
       {selectedFile && (
         <FileStatus 
           fileContext={{

@@ -119,6 +119,32 @@ section > div {
 .bg-muted\/20 { background-color: rgba(255, 255, 255, 0.02); }
 .hidden { display: none; }
 
+/* Button & Hover States */
+.p-2 { padding: 0.5rem; }
+.py-2 { padding-block: 0.5rem; }
+.py-3 { padding-block: 0.75rem; }
+.py-4 { padding-block: 1rem; }
+.h-0\.5 { height: 0.125rem; }
+.w-8 { width: 2rem; }
+.w-6 { width: 1.5rem; }
+.h-6 { height: 1.5rem; }
+.rounded-full { border-radius: 9999px; }
+.cursor-not-allowed { cursor: not-allowed; }
+.opacity-50 { opacity: 0.5; }
+.hover\:bg-muted:hover { background-color: var(--color-muted); }
+.hover\:bg-success\/20:hover { background-color: rgba(81, 207, 102, 0.2); }
+.hover\:scale-105:hover { transform: scale(1.05); }
+.hover\:scale-95:active { transform: scale(0.95); }
+.bg-success\/10 { background-color: rgba(81, 207, 102, 0.1); }
+.bg-success\/20 { background-color: rgba(81, 207, 102, 0.2); }
+.bg-card\/50 { background-color: rgba(26, 26, 26, 0.5); }
+.bg-muted\/50 { background-color: rgba(255, 255, 255, 0.05); }
+.text-success { color: var(--color-success); }
+.text-muted-foreground { color: rgba(255, 255, 255, 0.7); }
+.text-primary-foreground\/20 { color: rgba(255, 255, 255, 0.2); }
+.bg-primary-foreground\/20 { background-color: rgba(255, 255, 255, 0.2); }
+.border-b { border-bottom: 1px solid; }
+
 /* Animations & Transitions */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(-10px); }
@@ -145,16 +171,23 @@ section > div {
 @media (min-width: 768px) {
   .container { max-width: 768px; padding-inline: 1.5rem; }
   .md\:hidden { display: none; }
+  .md\:flex { display: flex; }
   .md\:px-6 { padding-inline: 1.5rem; }
   .md\:py-12 { padding-block: 3rem; }
   .md\:mb-4 { margin-bottom: 1rem; }
   .md\:mb-12 { margin-bottom: 3rem; }
   .md\:mb-16 { margin-bottom: 4rem; }
+  .md\:gap-2 { gap: 0.5rem; }
+  .md\:gap-3 { gap: 0.75rem; }
   .md\:gap-6 { gap: 1.5rem; }
   .md\:gap-8 { gap: 2rem; }
   .md\:gap-10 { gap: 2.5rem; }
   .md\:gap-12 { gap: 3rem; }
   .md\:space-y-8 > * + * { margin-top: 2rem; }
+  .md\:text-xl { font-size: 1.25rem; }
+  .md\:text-2xl { font-size: 1.5rem; }
+  .md\:text-3xl { font-size: 1.875rem; }
+  .md\:text-4xl { font-size: 2.25rem; }
 }
 
 /* Large (1024px) */
@@ -188,4 +221,5 @@ section > div {
   .container { max-width: 1280px; }
   .xl\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .xl\:px-12 { padding-inline: 3rem; }
+  .xl\:inline { display: inline; }
 }

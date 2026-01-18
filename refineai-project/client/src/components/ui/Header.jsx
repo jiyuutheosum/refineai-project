@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { WorkflowContext } from '../../App';
 import Icon from '../AppIcon';
 
 
@@ -7,6 +8,7 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const workflowContext = useContext(WorkflowContext);
 
   const navigationItems = [
     { label: 'Upload Resume', path: '/resume-upload', icon: 'Upload' },
@@ -18,6 +20,9 @@ const Header = () => {
   const isActive = (path) => location?.pathname === path;
 
   const handleNavigation = (path) => {
+    if (workflowContext) {
+      workflowContext.markPhaseComplete(path);
+    }
     navigate(path);
     setMobileMenuOpen(false);
   };
