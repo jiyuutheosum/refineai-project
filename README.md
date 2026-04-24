@@ -1,18 +1,80 @@
-# React
+# RefineAI - Resume Feedback Platform
 
-A modern React-based project utilizing the latest frontend technologies and tools for building responsive web applications.
+Feature-first React 18 + Vite app with modular architecture for AI-powered resume analysis.
 
-## 🚀 Features
+## 🛠️ Tech Stack
 
-- **React 18** - React version with improved rendering and concurrent features
-- **Vite** - Lightning-fast build tool and development server
-- **Redux Toolkit** - State management with simplified Redux setup
-- **TailwindCSS** - Utility-first CSS framework with extensive customization
-- **React Router v6** - Declarative routing for React applications
-- **Data Visualization** - Integrated D3.js and Recharts for powerful data visualization
-- **Form Management** - React Hook Form for efficient form handling
-- **Animation** - Framer Motion for smooth UI animations
-- **Testing** - Jest and React Testing Library setup
+| Category | Technologies |
+|----------|--------------|
+| Framework | React 18 + Vite |
+| State | Redux Toolkit (feature slices) |
+| Routing | React Router v6 |
+| Styling | TailwindCSS + CSS Tokens |
+| Forms | React Hook Form |
+| Animation | Framer Motion |
+| Charts | Recharts + D3.js |
+| Testing | Jest + RTL |
+
+## 🏗️ Architecture
+
+**Feature-First Modular Design:**
+
+```
+src/
+├── app/              # App-wide setup only (router/store/providers/layouts)
+├── features/         # Self-contained domains
+│   └── resume-upload/
+│       ├── pages/
+│       ├── components/
+│       ├── hooks/
+│       ├── store/ (slice/selectors)
+│       ├── services/
+│       ├── utils/
+│       ├── schemas/
+│       └── constants/
+├── shared/           # Cross-feature reusables
+│   ├── components/ui/
+│   ├── lib/ (cn.js)
+│   └── hooks/
+└── styles/           # Globals + Tailwind + tokens
+```
+
+**Rules:** app→features/shared, features→shared only. Thin pages, business logic in features.
+
+## 🚀 Quick Start
+
+```bash
+npm install
+npm run start  # http://localhost:5170
+npm run build  # production
+```
+
+## 📁 Features Implemented
+
+- **resume-upload**: Full workflow (validation, processing, Redux, auto-navigate)
+- **resume-analysis**: Components ready (ActionPanel, FeedbackCard, ResumePreview)
+- **manual-resume-editor**: Editor tools (SectionEditor, FeedbackSidebar)
+- **feedback-summary**: Charts (ScoreCard, SectionBreakdown)
+
+## 🧩 Extending Features
+
+1. Create `features/[new-feature]/pages/[Name]Page.jsx` (thin)
+2. Add `store/[name]Slice.js/selectors.js`
+3. Business logic in `hooks/services/utils/`
+4. Add route in `app/router/Routes.jsx`
+5. Update `app/store/index.js` reducer
+
+## 🎨 Customization
+
+- **Tailwind**: Edit `tailwind.config.js`, tokens in `styles/globals.css`
+- **Theme**: CSS vars in `:root` (light/dark)
+- **Routes**: `app/router/Routes.jsx`
+
+## 📊 Upcoming
+
+Apply pattern to remaining features, add unit tests, real API integration, auth.
+
+Modern, scalable resume feedback platform ready for production.
 
 ## 📋 Prerequisites
 
