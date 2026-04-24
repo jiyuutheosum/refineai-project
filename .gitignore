@@ -8,4 +8,5 @@ package-lock.json
 vite.config.*s.*
 
 .env
+.env.*
 
