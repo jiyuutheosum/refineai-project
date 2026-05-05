@@ -1,0 +1,1 @@
+export { default as ResumeAnalysisPage } from './pages/ResumeAnalysisPage'

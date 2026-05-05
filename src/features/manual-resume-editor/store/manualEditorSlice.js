@@ -9,54 +9,106 @@ const initialState = {
   autoSaveStatus: 'saved',
   lastSaved: null,
   status: 'idle',
-  error: null
+  error: null,
 }
 
 const manualEditorSlice = createSlice({
   name: 'manualEditor',
   initialState,
   reducers: {
-    setResumeSections: (state, action) => {
-      state.resumeSections = action.payload
+    setResumeSections(state, action) {
+      state.resumeSections = action.payload ?? []
+      state.originalSections = action.payload ?? []
     },
-    updateSectionContent: (state, action) => {
+
+    setFeedbackItems(state, action) {
+      state.feedbackItems = action.payload ?? []
+    },
+
+    updateSectionContent(state, action) {
       const { sectionId, newContent } = action.payload
-      const section = state.resumeSections.find(s => s.id === sectionId)
+
+      const section = state.resumeSections.find(
+        (section) => section.id === sectionId
+      )
+
       if (section) {
         section.content = newContent
       }
     },
-    deleteSection: (state, action) => {
+
+    deleteSection(state, action) {
       const sectionId = action.payload
-      state.resumeSections = state.resumeSections.filter(s => s.id !== sectionId)
+
+      state.resumeSections = state.resumeSections.filter(
+        (section) => section.id !== sectionId
+      )
     },
-    moveSection: (state, action) => {
+
+    moveSection(state, action) {
       const { sectionId, direction } = action.payload
-      // implementation
+
+      const currentIndex = state.resumeSections.findIndex(
+        (section) => section.id === sectionId
+      )
+
+      if (currentIndex === -1) return
+
+      const targetIndex =
+        direction === 'up' ? currentIndex - 1 : currentIndex + 1
+
+      if (targetIndex < 0 || targetIndex >= state.resumeSections.length) return
+
+      const sections = [...state.resumeSections]
+      const [movedSection] = sections.splice(currentIndex, 1)
+
+      sections.splice(targetIndex, 0, movedSection)
+
+      state.resumeSections = sections
     },
-    setAutoSaveStatus: (state, action) => {
+
+    setAutoSaveStatus(state, action) {
       state.autoSaveStatus = action.payload
+
       if (action.payload === 'saved') {
-        state.lastSaved = new Date()
+        state.lastSaved = new Date().toISOString()
       }
     },
-    setSidebarOpen: (state, action) => {
-      state.isSidebarOpen = action.payload
+
+    setSidebarOpen(state, action) {
+      state.isSidebarOpen = Boolean(action.payload)
     },
-    setShowComparison: (state, action) => {
-      state.showComparison = action.payload
-    }
-  }
+
+    toggleSidebar(state) {
+      state.isSidebarOpen = !state.isSidebarOpen
+    },
+
+    setShowComparison(state, action) {
+      state.showComparison = Boolean(action.payload)
+    },
+
+    toggleComparison(state) {
+      state.showComparison = !state.showComparison
+    },
+
+    resetManualEditor() {
+      return initialState
+    },
+  },
 })
 
-export const { 
-  setResumeSections, 
-  updateSectionContent, 
-  deleteSection, 
-  moveSection, 
-  setAutoSaveStatus, 
-  setSidebarOpen, 
-  setShowComparison 
+export const {
+  setResumeSections,
+  setFeedbackItems,
+  updateSectionContent,
+  deleteSection,
+  moveSection,
+  setAutoSaveStatus,
+  setSidebarOpen,
+  toggleSidebar,
+  setShowComparison,
+  toggleComparison,
+  resetManualEditor,
 } = manualEditorSlice.actions
-export default manualEditorSlice.reducer
 
+export default manualEditorSlice.reducer

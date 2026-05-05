@@ -1,88 +1,130 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import Icon from '../AppIcon';
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
+import { logout } from '@/features/auth/store/authSlice'
+import { useAuth } from '@/features/auth/hooks/useAuth'
+import Icon from '@/shared/components/AppIcon'
+import Button from '@/shared/components/ui/Button'
 
+function Header() {
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
+  const { user, isAuthenticated } = useAuth()
+  const authState = useAppSelector((state) => state.auth)
 
-const Header = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
-  const navigationItems = [
-    { label: 'Upload Resume', path: '/resume-upload', icon: 'Upload' },
-    { label: 'View Analysis', path: '/resume-analysis', icon: 'FileSearch' },
-    { label: 'Edit Resume', path: '/manual-resume-editor', icon: 'Edit' },
-    { label: 'Summary Report', path: '/feedback-summary', icon: 'FileText' }
-  ];
+  const handleLogout = async () => {
+    try {
+      await dispatch(logout()).unwrap()
+      navigate('/login')
+    } catch (error) {
+      // Error handled by slice
+    }
+  }
 
-  const isActive = (path) => location?.pathname === path;
-
-  const handleNavigation = (path) => {
-    navigate(path);
-    setMobileMenuOpen(false);
-  };
+  const getInitials = (name) => {
+    if (!name) return '?'
+    const parts = name.split(' ')
+    return parts.slice(0, 2).map((p) => p[0]).join('').toUpperCase()
+  }
 
   return (
-    <header className="sticky top-0 z-[100] bg-card shadow-elevation-2 transition-smooth">
-      <div className="flex items-center justify-between h-16 px-6 md:px-8">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg">
-            <Icon name="Sparkles" size={24} color="var(--color-primary)" />
-          </div>
-          <h1 className="text-xl font-heading font-semibold text-foreground">RefineAI</h1>
-        </div>
-
-        <nav className="hidden md:flex items-center gap-2">
-          {navigationItems?.map((item) => (
-            <button
-              key={item?.path}
-              onClick={() => handleNavigation(item?.path)}
-              className={`
-                flex items-center gap-2 px-4 py-2 rounded-lg transition-smooth
-                ${isActive(item?.path)
-                  ? 'bg-primary text-primary-foreground shadow-elevation-1'
-                  : 'text-foreground hover:bg-muted hover-lift'
-                }
-              `}
-            >
-              <Icon name={item?.icon} size={18} />
-              <span className="font-medium">{item?.label}</span>
-            </button>
-          ))}
-        </nav>
-
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 md:px-6 lg:px-8">
         <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 rounded-lg hover:bg-muted transition-smooth"
-          aria-label="Toggle menu"
+          type="button"
+          onClick={() => isAuthenticated ? navigate('/') : navigate('/')}
+          className="flex items-center gap-3 rounded-lg text-foreground transition hover:opacity-80"
+          aria-label="Go to upload page"
         >
-          <Icon name={mobileMenuOpen ? 'X' : 'Menu'} size={24} />
-        </button>
-      </div>
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-card border-t border-border animate-fade-in">
-          <nav className="flex flex-col p-4 gap-2">
-            {navigationItems?.map((item) => (
-              <button
-                key={item?.path}
-                onClick={() => handleNavigation(item?.path)}
-                className={`
-                  flex items-center gap-3 px-4 py-3 rounded-lg transition-smooth text-left
-                  ${isActive(item?.path)
-                    ? 'bg-primary text-primary-foreground shadow-elevation-1'
-                    : 'text-foreground hover:bg-muted'
-                  }
-                `}
-              >
-                <Icon name={item?.icon} size={20} />
-                <span className="font-medium">{item?.label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
-      )}
-    </header>
-  );
-};
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+            <Icon name="Sparkles" size={22} color="currentColor" />
+          </span>
 
-export default Header;
+          <span className="text-xl font-bold tracking-tight">
+            RefineAI
+          </span>
+        </button>
+
+        {/* Auth Section */}
+        <div className="flex items-center gap-4">
+          {!isAuthenticated ? (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => navigate('/login')}
+            >
+              Log In
+            </Button>
+          ) : (
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-2 rounded-lg px-2 py-1 transition hover:bg-accent"
+              >
+                {user?.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName}
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                    {getInitials(user?.displayName)}
+                  </div>
+                )}
+                <span className="text-sm font-medium text-foreground hidden md:block">
+                  {user?.displayName?.split(' ')[0]}
+                </span>
+                <Icon
+                  name={isDropdownOpen ? 'ChevronUp' : 'ChevronDown'}
+                  size={16}
+                  className="text-muted-foreground"
+                />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 rounded-md border bg-background py-1 shadow-md">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDropdownOpen(false)
+                      navigate('/')
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-accent"
+                  >
+                    <Icon name="FileText" size={16} />
+                    My Resumes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-accent"
+                  >
+                    <Icon name="LogOut" size={16} />
+                    Log Out
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+  )
+}
+
+export default Header

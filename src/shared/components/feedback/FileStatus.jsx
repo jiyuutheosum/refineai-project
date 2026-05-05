@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import Icon from '../AppIcon';
-import Button from './Button';
+import Icon from '@/shared/components/AppIcon';
+import Button from '@/shared/components/ui/Button';
 
 const FileStatus = ({ fileContext = {}, onReupload }) => {
   const [isExpanded, setIsExpanded] = useState(false);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import Icon from '../../../components/AppIcon';
-import Button from '../../../shared/components/ui/Button';
-import Input from '../../../shared/components/ui/Input';
+import Icon from '@/shared/components/AppIcon';
+import Button from '@/shared/components/ui/Button';
+import Input from '@/shared/components/ui/Input';
 
 const ExportOptions = ({ onExport }) => {
   const [showEmailModal, setShowEmailModal] = useState(false);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import Icon from '../../../components/AppIcon';
-import FeedbackCard from './FeedbackCard';
+import Icon from '@/shared/components/AppIcon';
+import FeedbackCard from '@/features/resume-analysis/components/FeedbackCard';
 
 const FeedbackPanel = ({ feedbackData, onHighlight }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');

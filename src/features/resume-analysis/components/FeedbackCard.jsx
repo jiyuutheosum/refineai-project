@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Icon from '../../../components/AppIcon';
+import Icon from '@/shared/components/AppIcon';
 
 const FeedbackCard = ({ feedback, onHighlight }) => {
   const [isExpanded, setIsExpanded] = useState(false);

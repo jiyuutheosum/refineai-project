@@ -1,18 +1,24 @@
-import React from 'react';
-import ProgressIndicator from '../../../shared/components/feedback/ProgressIndicator';
-import FileStatus from '../../../shared/components/feedback/FileStatus';
-import HelpContext from '../../../shared/components/ui/HelpContext';
-import UploadZone from '../components/UploadZone';
-import ValidationMessage from '../components/ValidationMessage';
-import ProcessingIndicator from '../components/ProcessingIndicator';
-import InfoPanel from '../components/InfoPanel';
-import FileRequirements from '../components/FileRequirements';
-import Button from '../../../shared/components/ui/Button';
+import React from 'react'
+import ProgressIndicator from '@/shared/components/feedback/ProgressIndicator'
+import FileStatus from '@/shared/components/feedback/FileStatus'
+import HelpContext from '@/shared/components/ui/HelpContext'
+import Button from '@/shared/components/ui/Button'
 
-import useResumeUpload from '../hooks/useResumeUpload';
-import { HELP_CONTENT } from '../constants/upload.constants';
+import UploadZone from '@/features/resume-upload/components/UploadZone'
+import ValidationMessage from '@/features/resume-upload/components/ValidationMessage'
+import ProcessingIndicator from '@/features/resume-upload/components/ProcessingIndicator'
+import InfoPanel from '@/features/resume-upload/components/InfoPanel'
+import FileRequirements from '@/features/resume-upload/components/FileRequirements'
+import ConfirmAnalysisModal from '@/features/resume-upload/components/ConfirmAnalysisModal'
 
-const ResumeUploadPage = () => {
+import useResumeUpload from '@/features/resume-upload/hooks/useResumeUpload'
+import { HELP_CONTENT } from '@/features/resume-upload/constants/upload.constants'
+
+const workflowState = {
+  completedPhases: [],
+}
+
+function ResumeUploadPage() {
   const {
     selectedFile,
     validationState,
@@ -20,13 +26,17 @@ const ResumeUploadPage = () => {
     processingProgress,
     handleFileSelect,
     handleReupload,
-  } = useResumeUpload();
+    showConfirmModal,
+    pendingFile,
+    handleConfirmAnalysis,
+    handleCancelAnalysis,
+  } = useResumeUpload()
 
-  const workflowState = {
-    completedPhases: [],
-  };
+  const fileName = pendingFile?.name ?? selectedFile?.fileName ?? selectedFile?.name
+  const fileSize = pendingFile?.size ?? selectedFile?.fileSize ?? selectedFile?.size
 
-  const helpContent = HELP_CONTENT;
+  const hasValidationMessage =
+    validationState?.type && validationState?.message
 
   return (
     <div className="min-h-screen bg-background">
@@ -35,9 +45,9 @@ const ResumeUploadPage = () => {
       {selectedFile && (
         <FileStatus
           fileContext={{
-            fileName: selectedFile?.fileName ?? selectedFile?.name,
-            fileSize: selectedFile?.fileSize ?? selectedFile?.size,
-            uploadDate: selectedFile?.uploadDate,
+            fileName,
+            fileSize,
+            uploadDate: selectedFile.uploadDate,
             processingStatus: isProcessing ? 'processing' : 'complete',
             analysisComplete: false,
           }}
@@ -47,62 +57,64 @@ const ResumeUploadPage = () => {
 
       <main className="container mx-auto px-4 py-8 md:px-6 md:py-12 lg:px-8 lg:py-16">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-8 text-center md:mb-12 lg:mb-16">
+          <header className="mb-8 text-center md:mb-12 lg:mb-16">
             <h1 className="mb-4 text-3xl font-bold text-foreground md:mb-6 md:text-4xl lg:text-5xl">
               Upload Your Resume
             </h1>
-            <p className="mx-auto max-w-2xl text-base text-muted-foreground md:text-lg">
+
+            <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
               Get AI-powered educational feedback to improve your resume. Upload
               your file to begin the analysis process.
             </p>
-          </div>
+          </header>
 
-          {!isProcessing ? (
-            <div className="grid grid-cols-1 gap-8 md:gap-10 lg:grid-cols-3 lg:gap-12">
+          {isProcessing ? (
+            <section className="mx-auto max-w-2xl">
+              <ProcessingIndicator
+                fileName={fileName}
+                progress={processingProgress}
+              />
+
+              <div className="mt-8 text-center">
+                <Button variant="outline" size="lg" onClick={handleReupload}>
+                  Cancel Upload
+                </Button>
+              </div>
+            </section>
+          ) : (
+            <section className="grid grid-cols-1 gap-8 md:gap-10 lg:grid-cols-3 lg:gap-12">
               <div className="space-y-6 md:space-y-8 lg:col-span-2">
-                <UploadZone
-                  onFileSelect={handleFileSelect}
-                  isProcessing={isProcessing}
-                />
+                <UploadZone onFileSelect={handleFileSelect} />
 
-                {validationState?.message && (
+                {hasValidationMessage && (
                   <ValidationMessage
-                    type={validationState?.type}
-                    message={validationState?.message}
+                    type={validationState.type}
+                    message={validationState.message}
                   />
                 )}
 
                 <FileRequirements />
               </div>
 
-              <div className="lg:col-span-1">
+              <aside className="lg:col-span-1">
                 <InfoPanel />
-              </div>
-            </div>
-          ) : (
-            <div className="mx-auto max-w-2xl">
-              <ProcessingIndicator
-                fileName={selectedFile?.fileName ?? selectedFile?.name}
-                progress={processingProgress}
-              />
-
-              <div className="mt-8 text-center">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleReupload}
-                >
-                  Cancel Upload
-                </Button>
-              </div>
-            </div>
+              </aside>
+            </section>
           )}
         </div>
       </main>
 
-      <HelpContext helpContent={helpContent} />
-    </div>
-  );
-};
+      <HelpContext helpContent={HELP_CONTENT} />
 
-export default ResumeUploadPage;
+      <ConfirmAnalysisModal
+        isOpen={showConfirmModal}
+        fileName={fileName}
+        fileSize={fileSize}
+        onConfirm={handleConfirmAnalysis}
+        onCancel={handleCancelAnalysis}
+      />
+    </div>
+  )
+}
+
+export default ResumeUploadPage

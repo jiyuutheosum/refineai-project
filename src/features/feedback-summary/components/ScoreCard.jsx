@@ -1,5 +1,5 @@
 import React from 'react';
-import Icon from '../../../components/AppIcon';
+import Icon from '@/shared/components/AppIcon';
 
 const ScoreCard = ({ category, score, description, color, icon }) => {
   const getScoreColor = (score) => {

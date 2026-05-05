@@ -1,4 +1,5 @@
-import { useSelector } from 'react-redux'
+import { useAppSelector } from '@/app/store/hooks'
+
 import {
   selectOverallScore,
   selectTotalIssues,
@@ -8,34 +9,31 @@ import {
   selectSectionBreakdowns,
   selectPriorityActions,
   selectEducationalResources,
-  selectStatus
+  selectFeedbackStatus,
 } from '../store/selectors'
 
-export const useFeedbackSummary = () => {
-  const overallScore = useSelector(selectOverallScore)
-  const totalIssues = useSelector(selectTotalIssues)
-  const strengths = useSelector(selectStrengths)
-  const improvements = useSelector(selectImprovements)
-  const categoryScores = useSelector(selectCategoryScores)
-  const sectionBreakdowns = useSelector(selectSectionBreakdowns)
-  const priorityActions = useSelector(selectPriorityActions)
-  const educationalResources = useSelector(selectEducationalResources)
-  const status = useSelector(selectStatus)
-
-  const summaryData = {
-    overallScore,
-    totalIssues,
-    strengths,
-    improvements,
-    categoryScores,
-    sectionBreakdowns,
-    priorityActions,
-    educationalResources
-  }
+export function useFeedbackSummary() {
+  const overallScore = useAppSelector(selectOverallScore)
+  const totalIssues = useAppSelector(selectTotalIssues)
+  const strengths = useAppSelector(selectStrengths)
+  const improvements = useAppSelector(selectImprovements)
+  const categoryScores = useAppSelector(selectCategoryScores)
+  const sectionBreakdowns = useAppSelector(selectSectionBreakdowns)
+  const priorityActions = useAppSelector(selectPriorityActions)
+  const educationalResources = useAppSelector(selectEducationalResources)
+  const status = useAppSelector(selectFeedbackStatus)
 
   return {
-    summaryData,
-    status
+    summaryData: {
+      overallScore,
+      totalIssues,
+      strengths,
+      improvements,
+      categoryScores,
+      sectionBreakdowns,
+      priorityActions,
+      educationalResources,
+    },
+    status,
   }
 }
-

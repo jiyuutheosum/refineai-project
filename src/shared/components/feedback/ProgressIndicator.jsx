@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Icon from '../AppIcon';
+import Icon from '@/shared/components/AppIcon';
 
 const ProgressIndicator = ({ workflowState = {} }) => {
   const location = useLocation();

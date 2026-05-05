@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Icon from '../../../components/AppIcon';
-import Button from '../../../components/ui/Button';
-import EditorToolbar from './EditorToolbar';
+import Icon from '@/shared/components/AppIcon';
+import Button from '@/shared/components/ui/Button';
+import EditorToolbar from '@/features/manual-resume-editor/components/EditorToolbar';
 
 const SectionEditor = ({ 
   section, 

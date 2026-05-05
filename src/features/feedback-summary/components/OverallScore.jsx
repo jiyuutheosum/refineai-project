@@ -1,5 +1,5 @@
 import React from 'react';
-import Icon from '../../../components/AppIcon';
+import Icon from '@/shared/components/AppIcon';
 
 const OverallScore = ({ score, totalIssues, strengths, improvements }) => {
   const getScoreLevel = () => {

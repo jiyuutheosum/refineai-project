@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import Icon from '../../../components/AppIcon';
-import Button from '../../../components/ui/Button';
+import Icon from '@/shared/components/AppIcon';
+import Button from '@/shared/components/ui/Button';
 
 const UploadZone = ({ onFileSelect, isProcessing }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -129,7 +129,7 @@ const UploadZone = ({ onFileSelect, isProcessing }) => {
 
           <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
             <Icon name="Info" size={14} />
-            <span>Maximum file size: 2-5 MB</span>
+            <span>Maximum file size: 50 KB - 5 MB</span>
           </div>
         </div>
       </div>

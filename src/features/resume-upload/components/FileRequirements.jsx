@@ -1,5 +1,5 @@
-import React from 'react';
-import Icon from '../../../components/AppIcon';
+import React from 'react'
+import Icon from '@/shared/components/AppIcon'
 
 const FileRequirements = () => {
   const requirements = [
@@ -12,7 +12,7 @@ const FileRequirements = () => {
     {
       icon: 'HardDrive',
       title: 'File Size',
-      items: ['Minimum: 2 MB', 'Maximum: 5 MB'],
+      items: ['Minimum: 50 KB', 'Maximum: 5 MB'],
       color: 'text-secondary'
     },
     {
@@ -21,7 +21,7 @@ const FileRequirements = () => {
       items: ['Use clear formatting', 'Include all relevant sections', 'Avoid images or graphics'],
       color: 'text-success'
     }
-  ];
+  ]
 
   return (
     <div className="bg-muted/50 border border-border rounded-xl p-6 md:p-8">
@@ -52,7 +52,7 @@ const FileRequirements = () => {
         ))}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default FileRequirements;
+export default FileRequirements

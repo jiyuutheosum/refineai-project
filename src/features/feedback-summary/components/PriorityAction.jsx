@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Icon from '../../../components/AppIcon';
+import Icon from '@/shared/components/AppIcon';
 
 const PriorityAction = ({ title, description, difficulty, impact, category, onCheck }) => {
   const [isChecked, setIsChecked] = React.useState(false);

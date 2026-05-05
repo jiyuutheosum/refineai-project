@@ -1,10 +1,18 @@
-// Simple validation schema for upload form
+export const ACCEPTED_RESUME_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]
+
+export const ACCEPTED_RESUME_EXTENSIONS = ['.pdf', '.docx']
+
+export const MIN_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+export const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+
 export const uploadSchema = {
-  fileTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-  minSize: 2 * 1024 * 1024,
-  maxSize: 5 * 1024 * 1024,
+  fileTypes: ACCEPTED_RESUME_TYPES,
+  fileExtensions: ACCEPTED_RESUME_EXTENSIONS,
+  minSize: MIN_FILE_SIZE,
+  maxSize: MAX_FILE_SIZE,
 }
 
-// Extend with React Hook Form resolver if zod added
 export default uploadSchema
-

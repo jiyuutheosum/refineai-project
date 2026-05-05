@@ -1,5 +1,5 @@
 import React from 'react';
-import Icon from '../../../components/AppIcon';
+import Icon from '@/shared/components/AppIcon';
 
 const ResumePreview = ({ resumeContent, highlightedLines, onLineClick }) => {
   const categoryColors = {

@@ -1,7 +1,8 @@
 import { Provider } from 'react-redux'
+
 import { store } from '../store'
 
-const ReduxProvider = ({ children }) => {
+function ReduxProvider({ children }) {
   return <Provider store={store}>{children}</Provider>
 }
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Icon from '../../../components/AppIcon';
-import Button from '../../../components/ui/Button';
+import Icon from '@/shared/components/AppIcon';
+import Button from '@/shared/components/ui/Button';
 
 const ActionPanel = ({ feedbackCount, onDownload }) => {
   const navigate = useNavigate();

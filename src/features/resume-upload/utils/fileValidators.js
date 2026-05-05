@@ -1,6 +1,6 @@
 export const validateFile = (file) => {
   const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-  const minSize = 2 * 1024 * 1024;
+  const minSize = 50 * 1024;
   const maxSize = 5 * 1024 * 1024;
 
   if (!validTypes.includes(file?.type)) {
@@ -15,7 +15,7 @@ export const validateFile = (file) => {
     return {
       valid: false,
       type: 'error',
-      message: `File size is too small (${(file?.size / 1024 / 1024)?.toFixed(2)} MB). Minimum required size is 2 MB.`
+      message: `File size is too small (${(file?.size / 1024)?.toFixed(2)} KB). Minimum required size is 50 KB.`
     };
   }
 

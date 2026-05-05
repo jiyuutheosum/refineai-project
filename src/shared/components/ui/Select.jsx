@@ -1,9 +1,9 @@
 // components/ui/Select.jsx - Shadcn style Select
 import React, { useState } from "react";
 import { ChevronDown, Check, Search, X } from "lucide-react";
-import { cn } from "../../utils/cn";
-import Button from "./Button";
-import Input from "./Input";
+import { cn } from "@/../lib/utils";
+import Button from "@/../shared/components/ui/Button";
+import Input from "@/../shared/components/ui/Input";
 
 const Select = React.forwardRef(({
     className,

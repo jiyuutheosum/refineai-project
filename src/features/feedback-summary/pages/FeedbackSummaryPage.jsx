@@ -1,10 +1,13 @@
-import React from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
 import Header from '../../../shared/components/layout/Header'
 import ProgressIndicator from '../../../shared/components/feedback/ProgressIndicator'
 import FileStatus from '../../../shared/components/feedback/FileStatus'
 import HelpContext from '../../../shared/components/ui/HelpContext'
-import Button from '../../../shared/components/ui/Button'
+import Button from '@/shared/components/ui/Button'
+import Icon from '../../../shared/components/AppIcon'
+
 import OverallScore from '../components/OverallScore'
 import ScoreCard from '../components/ScoreCard'
 import SectionBreakdown from '../components/SectionBreakdown'
@@ -16,193 +19,236 @@ import { useFeedbackSummary } from '../hooks/useFeedbackSummary'
 import { HELP_CONTENT } from '../constants'
 import { calculateProgress } from '../utils'
 
-const FeedbackSummaryPage = () => {
+const workflowState = {
+  completedPhases: ['/resume-upload', '/resume-analysis', '/manual-resume-editor'],
+}
+
+const fileContext = {
+  fileName: 'Sarah_Johnson_Resume.pdf',
+  fileSize: 2457600,
+  uploadDate: new Date('2026-01-10T10:30:00').toISOString(),
+  processingStatus: 'complete',
+  analysisComplete: true,
+}
+
+function FeedbackSummaryPage() {
   const navigate = useNavigate()
   const { summaryData, status } = useFeedbackSummary()
+  const [checkedActions, setCheckedActions] = useState(() => new Set())
 
-  const workflowState = {
-    completedPhases: ['/resume-upload', '/resume-analysis', '/manual-resume-editor']
-  }
+  const priorityActions = summaryData?.priorityActions ?? []
+  const categoryScores = summaryData?.categoryScores ?? []
+  const sectionBreakdowns = summaryData?.sectionBreakdowns ?? []
+  const educationalResources = summaryData?.educationalResources ?? []
 
-  const fileContext = {
-    fileName: 'Sarah_Johnson_Resume.pdf',
-    fileSize: 2457600,
-    uploadDate: new Date('2026-01-10T10:30:00'),
-    processingStatus: 'complete',
-    analysisComplete: true
-  }
-
-  const checkedActions = new Set()
-  const progress = calculateProgress(checkedActions.size, summaryData.priorityActions?.length || 0)
+  const progress = useMemo(
+    () => calculateProgress(checkedActions.size, priorityActions.length),
+    [checkedActions.size, priorityActions.length]
+  )
 
   const handleActionCheck = (index, isChecked) => {
-    // Hook action
+    setCheckedActions((currentActions) => {
+      const nextActions = new Set(currentActions)
+
+      if (isChecked) {
+        nextActions.add(index)
+      } else {
+        nextActions.delete(index)
+      }
+
+      return nextActions
+    })
   }
 
   const handleExport = (type, email) => {
-    // Service call
+    console.log('Export requested:', { type, email })
   }
 
   const handleReupload = () => {
-    navigate('/resume-upload')
+    navigate('/')
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="flex min-h-[70vh] items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading feedback summary...</p>
+        </main>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
       <ProgressIndicator workflowState={workflowState} />
-      <FileStatus 
-        fileContext={fileContext}
-        onReupload={handleReupload}
-      />
-      <main className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8 lg:py-12">
-        <div className="mb-6 md:mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="bg-primary/10 p-2 md:p-3 rounded-xl">
-              <Icon name="FileText" size={24} className="text-primary md:w-7 md:h-7" />
+
+      <FileStatus fileContext={fileContext} onReupload={handleReupload} />
+
+      <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-12">
+        <header className="mb-6 md:mb-8">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-primary/10 p-2 md:p-3">
+              <Icon name="FileText" size={24} className="text-primary md:h-7 md:w-7" />
             </div>
+
             <div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-heading font-bold text-foreground">
+              <h1 className="text-2xl font-bold text-foreground md:text-3xl lg:text-4xl">
                 Feedback Summary
               </h1>
-              <p className="text-sm md:text-base text-muted-foreground mt-1">
-                Comprehensive analysis of your resume with actionable insights
+
+              <p className="mt-1 text-sm text-muted-foreground md:text-base">
+                Comprehensive analysis of your resume with actionable insights.
               </p>
             </div>
           </div>
-        </div>
+        </header>
 
         <div className="space-y-6 md:space-y-8">
           <OverallScore
-            score={summaryData.overallScore}
-            totalIssues={summaryData.totalIssues}
-            strengths={summaryData.strengths}
-            improvements={summaryData.improvements}
+            score={summaryData?.overallScore}
+            totalIssues={summaryData?.totalIssues}
+            strengths={summaryData?.strengths}
+            improvements={summaryData?.improvements}
           />
 
-          <div>
-            <h2 className="text-xl md:text-2xl font-heading font-bold text-foreground mb-4 md:mb-6">
+          <section>
+            <h2 className="mb-4 text-xl font-bold text-foreground md:mb-6 md:text-2xl">
               Category Breakdown
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {summaryData.categoryScores?.map((category, index) => (
-                <ScoreCard key={index} {...category} />
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
+              {categoryScores.map((category) => (
+                <ScoreCard key={category.title ?? category.name} {...category} />
               ))}
             </div>
-          </div>
+          </section>
 
-          <div>
-            <div className="flex items-center justify-between mb-4 md:mb-6">
-              <h2 className="text-xl md:text-2xl font-heading font-bold text-foreground">
+          <section>
+            <div className="mb-4 flex items-center justify-between md:mb-6">
+              <h2 className="text-xl font-bold text-foreground md:text-2xl">
                 Priority Actions
               </h2>
+
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Icon name="CheckCircle2" size={16} className="text-success" />
-                <span>{checkedActions.size} of {summaryData.priorityActions?.length} completed</span>
+                <span>
+                  {checkedActions.size} of {priorityActions.length} completed
+                </span>
               </div>
             </div>
+
+            <div className="mb-4 h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
             <div className="space-y-3 md:space-y-4">
-              {summaryData.priorityActions?.map((action, index) => (
+              {priorityActions.map((action, index) => (
                 <PriorityAction
-                  key={index}
+                  key={action.title ?? index}
                   {...action}
                   onCheck={(isChecked) => handleActionCheck(index, isChecked)}
                 />
               ))}
             </div>
-          </div>
+          </section>
 
-          <div>
-            <h2 className="text-xl md:text-2xl font-heading font-bold text-foreground mb-4 md:mb-6">
+          <section>
+            <h2 className="mb-4 text-xl font-bold text-foreground md:mb-6 md:text-2xl">
               Section Analysis
             </h2>
+
             <div className="space-y-3 md:space-y-4">
-              {summaryData.sectionBreakdowns?.map((section, index) => (
-                <SectionBreakdown key={index} {...section} />
+              {sectionBreakdowns.map((section) => (
+                <SectionBreakdown key={section.title ?? section.name} {...section} />
               ))}
             </div>
-          </div>
+          </section>
 
-          <div>
-            <h2 className="text-xl md:text-2xl font-heading font-bold text-foreground mb-4 md:mb-6">
+          <section>
+            <h2 className="mb-4 text-xl font-bold text-foreground md:mb-6 md:text-2xl">
               Educational Resources
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {summaryData.educationalResources?.map((resource, index) => (
-                <ResourceCard key={index} {...resource} />
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
+              {educationalResources.map((resource) => (
+                <ResourceCard key={resource.title ?? resource.name} {...resource} />
               ))}
             </div>
-          </div>
+          </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+          <section className="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-2">
             <ExportOptions onExport={handleExport} />
-            <div className="bg-card border border-border rounded-xl p-4 md:p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="bg-secondary/10 p-2 rounded-lg">
+
+            <div className="rounded-xl border border-border bg-card p-4 md:p-6">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="rounded-lg bg-secondary/10 p-2">
                   <Icon name="ArrowRight" size={20} className="text-secondary" />
                 </div>
+
                 <div>
-                  <h3 className="text-base md:text-lg font-heading font-semibold text-foreground">
+                  <h3 className="text-base font-semibold text-foreground md:text-lg">
                     Next Steps
                   </h3>
-                  <p className="text-xs md:text-sm text-muted-foreground">
-                    Continue improving your resume
+
+                  <p className="text-xs text-muted-foreground md:text-sm">
+                    Continue improving your resume.
                   </p>
                 </div>
               </div>
+
               <div className="space-y-3">
-                <Button
-                  variant="default"
-                  iconName="Edit"
-                  iconPosition="left"
-                  onClick={() => navigate('/manual-resume-editor')}
-                  fullWidth
-                >
+                <Button onClick={() => navigate('/manual-resume-editor')} fullWidth>
                   Edit Resume
                 </Button>
+
                 <Button
                   variant="outline"
-                  iconName="FileSearch"
-                  iconPosition="left"
                   onClick={() => navigate('/resume-analysis')}
                   fullWidth
                 >
                   View Detailed Analysis
                 </Button>
-                <Button
-                  variant="outline"
-                  iconName="Upload"
-                  iconPosition="left"
-                  onClick={() => navigate('/resume-upload')}
-                  fullWidth
-                >
+
+                <Button variant="outline" onClick={() => navigate('/')} fullWidth>
                   Analyze New Resume
                 </Button>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 md:p-6">
+          <section className="rounded-xl border border-primary/20 bg-primary/5 p-4 md:p-6">
             <div className="flex items-start gap-3">
-              <Icon name="Lightbulb" size={20} className="text-primary flex-shrink-0 mt-1" />
+              <Icon
+                name="Lightbulb"
+                size={20}
+                className="mt-1 flex-shrink-0 text-primary"
+              />
+
               <div>
-                <h3 className="text-base md:text-lg font-heading font-semibold text-foreground mb-2">
+                <h3 className="mb-2 text-base font-semibold text-foreground md:text-lg">
                   Pro Tip: Iterative Improvement
                 </h3>
-                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-                  Resume improvement is an ongoing process. Focus on implementing 2-3 priority actions at a time, 
-                  then re-analyze to see your progress. This iterative approach helps you learn resume writing 
-                  principles while building a stronger application.
+
+                <p className="text-sm leading-relaxed text-muted-foreground md:text-base">
+                  Resume improvement is an ongoing process. Focus on implementing
+                  2-3 priority actions at a time, then re-analyze to see your
+                  progress.
                 </p>
               </div>
             </div>
-          </div>
+          </section>
         </div>
       </main>
+
       <HelpContext helpContent={HELP_CONTENT} />
     </div>
   )
 }
 
 export default FeedbackSummaryPage
-

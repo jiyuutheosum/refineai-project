@@ -1,73 +1,125 @@
-import { createSlice } from '@reduxjs/toolkit'
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { fetchFeedbackSummary, saveFeedbackSummary } from '../services/feedback.api'
+
+// Async thunk for fetching feedback
+export const fetchFeedback = createAsyncThunk(
+  'feedback/fetchFeedback',
+  async (resumeId, { rejectWithValue }) => {
+    try {
+      const feedback = await fetchFeedbackSummary(resumeId)
+      return feedback
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+// Async thunk for saving feedback
+export const saveFeedback = createAsyncThunk(
+  'feedback/saveFeedback',
+  async ({ resumeId, feedbackData }, { rejectWithValue }) => {
+    try {
+      await saveFeedbackSummary(resumeId, feedbackData)
+      return feedbackData
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
 
 const initialState = {
-  overallScore: 72,
-  totalIssues: 18,
-  strengths: 12,
-  improvements: 6,
-  categoryScores: [
-    {
-      category: 'Impact',
-      score: 68,
-      description: 'Demonstrates results and achievements',
-      color: 'bg-primary/10',
-      icon: 'Target'
-    },
-    {
-      category: 'Clarity',
-      score: 78,
-      description: 'Clear and concise communication',
-      color: 'bg-secondary/10',
-      icon: 'Eye'
-    },
-    {
-      category: 'Specificity',
-      score: 65,
-      description: 'Concrete details and metrics',
-      color: 'bg-warning/10',
-      icon: 'Hash'
-    },
-    {
-      category: 'Relevance',
-      score: 75,
-      description: 'Aligned with target roles',
-      color: 'bg-success/10',
-      icon: 'CheckCircle2'
-    }
-  ],
+  overallScore: 0,
+  totalIssues: 0,
+  strengths: 0,
+  improvements: 0,
+  categoryScores: [],
   sectionBreakdowns: [],
   priorityActions: [],
   educationalResources: [],
-  status: 'idle',
-  error: null
+  status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
+  error: null,
+  currentResumeId: null,
 }
 
 const feedbackSlice = createSlice({
   name: 'feedback',
   initialState,
   reducers: {
-    setSummaryData: (state, action) => {
-      state.overallScore = action.payload.overallScore
-      state.totalIssues = action.payload.totalIssues
-      state.strengths = action.payload.strengths
-      state.improvements = action.payload.improvements
-      state.categoryScores = action.payload.categoryScores
-      state.sectionBreakdowns = action.payload.sectionBreakdowns
-      state.priorityActions = action.payload.priorityActions
-      state.educationalResources = action.payload.educationalResources
+    setSummaryData(state, action) {
+      const summaryData = action.payload ?? {}
+
+      state.overallScore = summaryData.overallScore ?? state.overallScore
+      state.totalIssues = summaryData.totalIssues ?? state.totalIssues
+      state.strengths = summaryData.strengths ?? state.strengths
+      state.improvements = summaryData.improvements ?? state.improvements
+      state.categoryScores = summaryData.categoryScores ?? state.categoryScores
+      state.sectionBreakdowns =
+        summaryData.sectionBreakdowns ?? state.sectionBreakdowns
+      state.priorityActions = summaryData.priorityActions ?? state.priorityActions
+      state.educationalResources =
+        summaryData.educationalResources ?? state.educationalResources
     },
-    setStatus: (state, action) => {
+
+    setStatus(state, action) {
       state.status = action.payload
     },
-    setError: (state, action) => {
+
+    setError(state, action) {
       state.error = action.payload
+      state.status = action.payload ? 'failed' : state.status
     },
-    clearFeedback: (state) => {
-      Object.assign(state, initialState)
-    }
-  }
+
+    setCurrentResumeId(state, action) {
+      state.currentResumeId = action.payload
+    },
+
+    clearFeedback() {
+      return initialState
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      // Fetch feedback
+      .addCase(fetchFeedback.pending, (state) => {
+        state.status = 'loading'
+        state.error = null
+      })
+      .addCase(fetchFeedback.fulfilled, (state, action) => {
+        state.status = 'succeeded'
+        const data = action.payload
+        state.overallScore = data.overallScore ?? 0
+        state.totalIssues = data.totalIssues ?? 0
+        state.strengths = data.strengths ?? 0
+        state.improvements = data.improvements ?? 0
+        state.categoryScores = data.categoryScores ?? []
+        state.sectionBreakdowns = data.sectionBreakdowns ?? []
+        state.priorityActions = data.priorityActions ?? []
+        state.educationalResources = data.educationalResources ?? []
+      })
+      .addCase(fetchFeedback.rejected, (state, action) => {
+        state.status = 'failed'
+        state.error = action.payload
+      })
+      // Save feedback
+      .addCase(saveFeedback.pending, (state) => {
+        state.status = 'loading'
+      })
+      .addCase(saveFeedback.fulfilled, (state) => {
+        state.status = 'succeeded'
+      })
+      .addCase(saveFeedback.rejected, (state, action) => {
+        state.status = 'failed'
+        state.error = action.payload
+      })
+  },
 })
 
-export const { setSummaryData, setStatus, setError, clearFeedback } = feedbackSlice.actions
-export default feedbackSlice.reducer
+export const {
+  setSummaryData,
+  setStatus,
+  setError,
+  setCurrentResumeId,
+  clearFeedback,
+} = feedbackSlice.actions
 
+export default feedbackSlice.reducer

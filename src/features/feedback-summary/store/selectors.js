@@ -1,13 +1,53 @@
+import { createSelector } from '@reduxjs/toolkit'
+
 export const selectFeedbackSummary = (state) => state.feedback
 
-export const selectOverallScore = (state) => state.feedback.overallScore
-export const selectTotalIssues = (state) => state.feedback.totalIssues
-export const selectStrengths = (state) => state.feedback.strengths
-export const selectImprovements = (state) => state.feedback.improvements
-export const selectCategoryScores = (state) => state.feedback.categoryScores
-export const selectSectionBreakdowns = (state) => state.feedback.sectionBreakdowns
-export const selectPriorityActions = (state) => state.feedback.priorityActions
-export const selectEducationalResources = (state) => state.feedback.educationalResources
-export const selectStatus = (state) => state.feedback.status
-export const selectError = (state) => state.feedback.error
+export const selectOverallScore = createSelector(
+  selectFeedbackSummary,
+  (feedback) => feedback.overallScore
+)
 
+export const selectTotalIssues = createSelector(
+  selectFeedbackSummary,
+  (feedback) => feedback.totalIssues
+)
+
+export const selectStrengths = createSelector(
+  selectFeedbackSummary,
+  (feedback) => feedback.strengths
+)
+
+export const selectImprovements = createSelector(
+  selectFeedbackSummary,
+  (feedback) => feedback.improvements
+)
+
+export const selectCategoryScores = createSelector(
+  selectFeedbackSummary,
+  (feedback) => feedback.categoryScores
+)
+
+export const selectSectionBreakdowns = createSelector(
+  selectFeedbackSummary,
+  (feedback) => feedback.sectionBreakdowns
+)
+
+export const selectPriorityActions = createSelector(
+  selectFeedbackSummary,
+  (feedback) => feedback.priorityActions
+)
+
+export const selectEducationalResources = createSelector(
+  selectFeedbackSummary,
+  (feedback) => feedback.educationalResources
+)
+
+export const selectFeedbackStatus = createSelector(
+  selectFeedbackSummary,
+  (feedback) => feedback.status
+)
+
+export const selectFeedbackError = createSelector(
+  selectFeedbackSummary,
+  (feedback) => feedback.error
+)

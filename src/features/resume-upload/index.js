@@ -1,0 +1,1 @@
+export { default as ResumeUploadPage } from './pages/ResumeUploadPage'
