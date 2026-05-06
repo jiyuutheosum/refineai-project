@@ -1,10 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { uploadResumeAPI, getUserResumes } from '../services/resumeUpload.api'
 
-// LocalStorage key for persisting current resume data
 const STORAGE_KEY = 'refineai_current_resume'
 
-// Load persisted currentResume from localStorage
 function loadPersistedResume() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
@@ -14,7 +12,6 @@ function loadPersistedResume() {
   }
 }
 
-// Save currentResume to localStorage
 function persistResume(resume) {
   try {
     if (resume) {
@@ -27,7 +24,6 @@ function persistResume(resume) {
   }
 }
 
-// Async thunk for uploading resume
 export const uploadResume = createAsyncThunk(
   'resumeUpload/uploadResume',
   async ({ file, onProgress }, { rejectWithValue }) => {
@@ -40,7 +36,6 @@ export const uploadResume = createAsyncThunk(
   }
 )
 
-// Async thunk for fetching user resumes
 export const fetchUserResumes = createAsyncThunk(
   'resumeUpload/fetchUserResumes',
   async (_, { rejectWithValue }) => {
@@ -70,7 +65,21 @@ const resumeUploadSlice = createSlice({
   },
   reducers: {
     setSelectedFile: (state, action) => {
-      state.selectedFile = action.payload
+      const payload = action.payload
+
+      // Never store the raw File object — only serializable metadata
+      if (!payload) {
+        state.selectedFile = null
+        return
+      }
+
+      state.selectedFile = {
+        fileName: payload.fileName ?? payload.name ?? '',
+        fileSize: payload.fileSize ?? payload.size ?? 0,
+        fileType: payload.fileType ?? '',
+        uploadDate: payload.uploadDate ?? new Date().toISOString(),
+        processingStatus: payload.processingStatus ?? 'pending',
+      }
     },
     setValidationState: (state, action) => {
       state.validationState = action.payload
@@ -95,7 +104,6 @@ const resumeUploadSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Upload resume
       .addCase(uploadResume.pending, (state) => {
         state.isProcessing = true
         state.status = 'loading'
@@ -106,6 +114,7 @@ const resumeUploadSlice = createSlice({
         state.isProcessing = false
         state.status = 'succeeded'
         state.processingProgress = 100
+        // action.payload from uploadResumeAPI is already serializable
         state.currentResume = action.payload
         state.selectedFile = null
         persistResume(action.payload)
@@ -116,7 +125,6 @@ const resumeUploadSlice = createSlice({
         state.processingProgress = 0
         state.error = action.payload
       })
-      // Fetch user resumes
       .addCase(fetchUserResumes.pending, (state) => {
         state.status = 'loading'
       })

@@ -64,7 +64,7 @@ src/
 - Co-locate state as close as possible to where it's used; lift only when needed.
 
 ```jsx
-// ✅ Clean component with clear separation
+// Clean component with clear separation
 const ProductCard = React.memo(({ productId }) => {
   const product = useAppSelector(selectProductById(productId));
   const dispatch = useAppDispatch();

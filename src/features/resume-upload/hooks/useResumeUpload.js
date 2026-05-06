@@ -1,8 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
-
 import {
   uploadResume,
   setSelectedFile,
@@ -11,9 +9,7 @@ import {
   setCurrentResume,
   resetUpload,
 } from '../store/resumeUploadSlice'
-
 import { validateFile } from '../utils/fileValidators'
-import { uploadResumeAPI } from '../services/resumeUpload.api'
 
 function useResumeUpload() {
   const dispatch = useAppDispatch()
@@ -27,7 +23,6 @@ function useResumeUpload() {
       if (!file) return
 
       const validation = validateFile(file)
-
       dispatch(
         setValidationState({
           type: validation.type,
@@ -37,30 +32,27 @@ function useResumeUpload() {
 
       if (!validation.valid) return
 
-      // Store the file and show confirmation modal
       setPendingFile(file)
       setShowConfirmModal(true)
 
       dispatch(
         setSelectedFile({
-          file,
           fileName: file.name,
           fileSize: file.size,
+          fileType: file.type.includes('pdf') ? 'pdf' : 'docx',
           uploadDate: new Date().toISOString(),
           processingStatus: 'uploading',
         })
       )
     },
     [dispatch]
-)
+  )
 
   const handleConfirmAnalysis = useCallback(async () => {
     if (!pendingFile) return
     setShowConfirmModal(false)
 
     try {
-      // Dispatch the Redux thunk — this uploads the file AND saves to Firestore
-      // The extraReducers in the slice will automatically set currentResume on success
       const result = await dispatch(
         uploadResume({
           file: pendingFile,
@@ -68,17 +60,13 @@ function useResumeUpload() {
         })
       ).unwrap()
 
-      // Ensure the result has resumeId alias for compatibility with analysis page
       const resumeData = {
         ...result,
         resumeId: result.resumeId || result.id,
       }
 
-      // Save the resume result to Redux so analysis page can access it
       dispatch(setCurrentResume(resumeData))
-
-      // Navigate to analysis page only after upload succeeds
-      navigate('/resume-analysis')
+      navigate('/resume-analysis', { state: { file: pendingFile } })
     } catch (error) {
       dispatch(
         setValidationState({
