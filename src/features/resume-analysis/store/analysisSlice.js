@@ -7,8 +7,6 @@ export const analyzeResume = createAsyncThunk(
     try {
       const existing = await fetchAnalysisFromFirestore(resumeId)
       if (existing) return existing
-
-      // Pass file directly — no downloadURL needed
       return await runResumeAnalysis({ resumeId, file, uid })
     } catch (error) {
       return rejectWithValue(error.message)
@@ -22,6 +20,7 @@ const analysisSlice = createSlice({
     overallScore: 0,
     overallFeedback: '',
     sectionFeedback: [],
+    extractedSections: null, // real resume content per section
     status: 'idle',
     error: null,
   },
@@ -30,6 +29,7 @@ const analysisSlice = createSlice({
       state.overallScore = 0
       state.overallFeedback = ''
       state.sectionFeedback = []
+      state.extractedSections = null
       state.status = 'idle'
       state.error = null
     },
@@ -45,6 +45,7 @@ const analysisSlice = createSlice({
         state.overallScore = action.payload.overallScore
         state.overallFeedback = action.payload.overallFeedback
         state.sectionFeedback = action.payload.sectionFeedback
+        state.extractedSections = action.payload.extractedSections ?? null
       })
       .addCase(analyzeResume.rejected, (state, action) => {
         state.status = 'failed'

@@ -4,6 +4,7 @@ import feedbackReducer from '../../features/feedback-summary/store/feedbackSlice
 import manualEditorReducer from '../../features/manual-resume-editor/store/manualEditorSlice'
 import authReducer from '../../features/auth/store/authSlice'
 import analysisReducer from '../../features/resume-analysis/store/analysisSlice'
+import hiringsReducer from '../../features/hirings/store/hiringsSlice'
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     manualEditor: manualEditorReducer,
     auth: authReducer,
     analysis: analysisReducer,
+    hirings: hiringsReducer,
   },
   devTools: import.meta.env.DEV,
 })

@@ -8,13 +8,13 @@ export async function runResumeAnalysis({ resumeId, file, uid }) {
     throw new Error('Missing required fields for analysis.')
   }
 
-  // Extract text directly from the File object — no fetch needed
   const resumeText = await extractTextFromFile(file)
 
   if (!resumeText || resumeText.length < 50) {
     throw new Error('Could not extract text from resume. Make sure the file is not scanned or image-based.')
   }
 
+  // Single call — returns both review and extracted sections
   const analysis = await analyzeResumeWithGemini(resumeText)
 
   const feedbackId = `${resumeId}_feedback`
@@ -27,6 +27,7 @@ export async function runResumeAnalysis({ resumeId, file, uid }) {
     overallScore: analysis.overallScore,
     overallFeedback: analysis.overallFeedback,
     sectionFeedback: analysis.sectionFeedback,
+    extractedSections: analysis.extractedSections,
     createdAt: serverTimestamp(),
   })
 

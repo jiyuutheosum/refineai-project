@@ -8,6 +8,7 @@ const ResumeUploadPage = lazy(() => import('../../features/resume-upload/pages/R
 const ResumeAnalysisPage = lazy(() => import('../../features/resume-analysis/pages/ResumeAnalysisPage'))
 const ManualResumeEditorPage = lazy(() => import('../../features/manual-resume-editor/pages/ManualResumeEditorPage'))
 const FeedbackSummaryPage = lazy(() => import('../../features/feedback-summary/pages/FeedbackSummaryPage'))
+const HiringsPage = lazy(() => import('../../features/hirings/pages/HiringsPage'))
 const NotFound = lazy(() => import('../../features/not-found/pages/NotFound'))
 const LoginPage = lazy(() => import('../../features/auth/pages/LoginPage'))
 
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
       {
         path: 'feedback-summary',
         element: <ProtectedRoute>{withSuspense(FeedbackSummaryPage)}</ProtectedRoute>,
+      },
+      {
+        path: 'hirings',
+        element: <ProtectedRoute>{withSuspense(HiringsPage)}</ProtectedRoute>,
       },
       {
         path: 'login',

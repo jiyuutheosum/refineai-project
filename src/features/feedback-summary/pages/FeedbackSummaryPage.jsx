@@ -30,6 +30,9 @@ function FeedbackSummaryPage() {
   // Get real file data from Redux instead of hardcoded mock
   const { currentResume } = useAppSelector((state) => state.resumeUpload)
 
+  // Get real analysis score from state - this is the key fix!
+  const { overallScore: analysisScore } = useAppSelector((state) => state.analysis)
+
   const priorityActions = summaryData?.priorityActions ?? []
   const categoryScores = summaryData?.categoryScores ?? []
   const sectionBreakdowns = summaryData?.sectionBreakdowns ?? []
@@ -72,7 +75,7 @@ function FeedbackSummaryPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ProgressIndicator workflowState={workflowState} />s
+      <ProgressIndicator workflowState={workflowState} />
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-12">
         <header className="mb-6 md:mb-8">
           <div className="flex items-center gap-3">
@@ -106,7 +109,7 @@ function FeedbackSummaryPage() {
 
         <div className="space-y-6 md:space-y-8">
           <OverallScore
-            score={summaryData?.overallScore}
+            score={analysisScore ?? summaryData?.overallScore}
             totalIssues={summaryData?.totalIssues}
             strengths={summaryData?.strengths}
             improvements={summaryData?.improvements}
@@ -184,11 +187,33 @@ function FeedbackSummaryPage() {
                     Next Steps
                   </h3>
                   <p className="text-xs text-muted-foreground md:text-sm">
-                    Continue improving your resume.
+                    {analysisScore >= 80
+                      ? 'Your resume is ready for job applications!'
+                      : 'Continue improving your resume.'}
                   </p>
                 </div>
               </div>
               <div className="space-y-3">
+                {analysisScore >= 80 && (
+                  <Button
+                    variant="default"
+                    onClick={() => navigate('/hirings')}
+                    fullWidth
+                    className="bg-success hover:bg-success/90"
+                  >
+                    <Icon name="Briefcase" size={18} className="mr-2" />
+                    Proceed to Hirings
+                  </Button>
+                )}
+                {analysisScore < 80 && (
+                  <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                    <Icon name="Lock" size={16} className="mr-2 inline" />
+                    Score 80+ required to unlock Hirings
+                    <span className="ml-1 font-medium text-foreground">
+                      (Current: {analysisScore}/100)
+                    </span>
+                  </div>
+                )}
                 <Button onClick={() => navigate('/manual-resume-editor')} fullWidth>
                   Edit Resume
                 </Button>
