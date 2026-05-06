@@ -58,9 +58,9 @@ function ResumeUploadPage() {
       <main className="container mx-auto px-4 py-8 md:px-6 md:py-12 lg:px-8 lg:py-16">
         <div className="mx-auto max-w-7xl">
           <header className="mb-8 text-center md:mb-12 lg:mb-16">
-            <h1 className="mb-4 text-3xl font-bold text-foreground md:mb-6 md:text-4xl lg:text-5xl">
-              Upload Your Resume
-            </h1>
+          <h1 className="font-heading text-5xl font-bold tracking-tight">
+            Upload Your Resume
+          </h1>
 
             <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
               Get AI-powered educational feedback to improve your resume. Upload
