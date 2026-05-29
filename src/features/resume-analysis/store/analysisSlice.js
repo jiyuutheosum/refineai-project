@@ -3,11 +3,19 @@ import { runResumeAnalysis, fetchAnalysisFromFirestore } from '../services/analy
 
 export const analyzeResume = createAsyncThunk(
   'analysis/analyzeResume',
-  async ({ resumeId, file, uid }, { rejectWithValue }) => {
+  async ({ resumeId, file, uid, resumeText }, { rejectWithValue }) => {
     try {
-      const existing = await fetchAnalysisFromFirestore(resumeId)
-      if (existing) return existing
-      return await runResumeAnalysis({ resumeId, file, uid })
+      if (!resumeText) {
+        const existing = await fetchAnalysisFromFirestore(resumeId)
+        if (existing) return existing
+      }
+
+      return await runResumeAnalysis({
+        resumeId,
+        file,
+        uid,
+        resumeText,
+      })
     } catch (error) {
       return rejectWithValue(error.message)
     }

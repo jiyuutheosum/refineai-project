@@ -123,7 +123,7 @@ function Header() {
                     type="button"
                     onClick={() => {
                       setIsDropdownOpen(false)
-                      navigate('/')
+                      navigate('/my-resumes')
                     }}
                     className="flex w-full items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-accent"
                   >

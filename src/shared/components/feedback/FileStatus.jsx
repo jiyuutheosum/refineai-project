@@ -137,7 +137,7 @@ const FileStatus = ({ fileContext = {}, onReupload }) => {
           </div>
         }
       </div>
-      <div className="hidden lg:block">
+      <div className="hidden">
         <div className="bg-card border border-border rounded-lg shadow-elevation-3 p-4 w-80 transition-smooth mt-12 mb-0 pb-4">
           <div className="flex items-start gap-3 mb-3">
             <div className={`${statusConfig?.bgColor} p-2 rounded-lg`}>

@@ -5,6 +5,7 @@ import manualEditorReducer from '../../features/manual-resume-editor/store/manua
 import authReducer from '../../features/auth/store/authSlice'
 import analysisReducer from '../../features/resume-analysis/store/analysisSlice'
 import hiringsReducer from '../../features/hirings/store/hiringsSlice'
+import myResumesReducer from '../../features/my-resumes/store/myResumesSlice'
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     auth: authReducer,
     analysis: analysisReducer,
     hirings: hiringsReducer,
+    myResumes: myResumesReducer,
   },
   devTools: import.meta.env.DEV,
 })

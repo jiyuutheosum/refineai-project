@@ -1,5 +1,14 @@
 import { groqClient } from '@/lib/groq'
 
+const EMPTY_SECTIONS = {
+  personalInfo: '',
+  summary: '',
+  experience: '',
+  education: '',
+  skills: '',
+  seminarsAndCertificates: '',
+}
+
 export async function analyzeResumeWithGemini(resumeText) {
   if (!resumeText || resumeText.trim().length < 50) {
     throw new Error('Resume text is too short to analyze.')
@@ -9,122 +18,131 @@ export async function analyzeResumeWithGemini(resumeText) {
     model: 'llama-3.3-70b-versatile',
     messages: [
       {
+        role: 'system',
+        content:
+          'You are a strict resume evaluator. Score based only on the provided resume text. Do not give generous default scores. Penalize missing, vague, weak, or incomplete sections.',
+      },
+      {
         role: 'user',
-        content: `You are an expert resume reviewer. Do two things at once and return a single JSON object:
+        content: `
+Return ONLY valid JSON. No markdown.
 
-1. REVIEW the resume — score each section and give feedback
-2. EXTRACT the resume content — copy exact text per section for editing
+Evaluate this resume using this strict rubric:
 
-Return ONLY this JSON structure, no markdown, no explanation:
+Overall score:
+- 90-100: exceptional resume with measurable impact, strong formatting, complete sections
+- 75-89: strong resume but still has minor improvements
+- 60-74: decent resume with clear missing details or weak impact
+- 40-59: incomplete or weak resume
+- 0-39: major issues, missing key sections, or very little usable content
+
+Important scoring rules:
+- Do NOT anchor around 80.
+- If work experience has no metrics/results, cap Work Experience at 75.
+- If professional summary is generic or missing, cap Summary at 65.
+- If skills are generic or not role-specific, cap Skills at 70.
+- If certifications/seminars are missing, score that section 40-55.
+- Overall score must reflect the section scores.
+- Use varied realistic scores based on the actual resume quality.
+
+Return this exact JSON shape:
 
 {
-  "overallScore": <number 0-100>,
-  "overallFeedback": "<2-3 sentence summary>",
+  "overallScore": 0,
+  "overallFeedback": "",
   "sectionFeedback": [
     {
       "section": "Personal Information",
-      "score": <number 0-100>,
-      "feedback": "<specific feedback>",
+      "score": 0,
+      "feedback": "",
       "suggestions": [
-        { "text": "<actionable suggestion>", "severity": "high" | "medium" | "low" }
+        { "text": "", "severity": "high" }
       ]
     },
     {
       "section": "Professional Summary",
-      "score": <number 0-100>,
-      "feedback": "<specific feedback>",
+      "score": 0,
+      "feedback": "",
       "suggestions": [
-        { "text": "<actionable suggestion>", "severity": "high" | "medium" | "low" }
+        { "text": "", "severity": "medium" }
       ]
     },
     {
       "section": "Work Experience",
-      "score": <number 0-100>,
-      "feedback": "<specific feedback>",
+      "score": 0,
+      "feedback": "",
       "suggestions": [
-        { "text": "<actionable suggestion>", "severity": "high" | "medium" | "low" }
+        { "text": "", "severity": "high" }
       ]
     },
     {
       "section": "Education",
-      "score": <number 0-100>,
-      "feedback": "<specific feedback>",
+      "score": 0,
+      "feedback": "",
       "suggestions": [
-        { "text": "<actionable suggestion>", "severity": "high" | "medium" | "low" }
+        { "text": "", "severity": "medium" }
       ]
     },
     {
       "section": "Skills",
-      "score": <number 0-100>,
-      "feedback": "<specific feedback>",
+      "score": 0,
+      "feedback": "",
       "suggestions": [
-        { "text": "<actionable suggestion>", "severity": "high" | "medium" | "low" }
+        { "text": "", "severity": "medium" }
       ]
     },
     {
       "section": "Seminar & Certifications",
-      "score": <number 0-100>,
-      "feedback": "<specific feedback>",
+      "score": 0,
+      "feedback": "",
       "suggestions": [
-        { "text": "<actionable suggestion>", "severity": "high" | "medium" | "low" }
+        { "text": "", "severity": "low" }
       ]
     }
   ],
   "extractedSections": {
-    "personalInfo": "<exact text: name, email, phone, address, linkedin — preserve line breaks>",
-    "summary": "<exact professional summary text from resume>",
-    "experience": "<exact work experience text — preserve all entries and line breaks>",
-    "education": "<exact education text from resume>",
-    "skills": "<exact skills text from resume>",
-    "seminarsAndCertificates": "<exact certifications and seminars text, empty string if none>"
+    "personalInfo": "",
+    "summary": "",
+    "experience": "",
+    "education": "",
+    "skills": "",
+    "seminarsAndCertificates": ""
   }
 }
-
-Scoring: 90-100 Exceptional, 75-89 Strong, 60-74 Good, 40-59 Needs work, 0-39 Major issues
-Severity: high = critical, medium = should fix, low = nice to have
-extractedSections rules: copy EXACT text word for word, preserve \\n line breaks, empty string if section not found
 
 Resume:
 ---
 ${resumeText}
 ---
-
-Return ONLY the JSON object.`,
+`,
       },
     ],
-    temperature: 0.3,
+    temperature: 0,
     max_tokens: 3000,
+    response_format: { type: 'json_object' },
   })
 
   const responseText = completion.choices[0]?.message?.content || ''
-  const cleaned = responseText
-    .replace(/```json/g, '')
-    .replace(/```/g, '')
-    .trim()
 
   try {
-    const result = JSON.parse(cleaned)
+    const result = JSON.parse(responseText)
 
-    // Ensure extractedSections always exists even if AI omits it
-    if (!result.extractedSections) {
-      result.extractedSections = {
-        personalInfo: '',
-        summary: '',
-        experience: '',
-        education: '',
-        skills: '',
-        seminarsAndCertificates: '',
-      }
+    return {
+      overallScore: Number(result.overallScore) || 0,
+      overallFeedback: result.overallFeedback || '',
+      sectionFeedback: Array.isArray(result.sectionFeedback)
+        ? result.sectionFeedback
+        : [],
+      extractedSections: {
+        ...EMPTY_SECTIONS,
+        ...(result.extractedSections || {}),
+      },
     }
-
-    return result
   } catch {
     throw new Error('AI returned an invalid response. Please try again.')
   }
 }
 
-// Keep this as a named export so analysis.api.js import doesn't break
-// It now just calls the combined function and returns only the sections
 export async function extractResumeSections(resumeText) {
   const result = await analyzeResumeWithGemini(resumeText)
   return result.extractedSections

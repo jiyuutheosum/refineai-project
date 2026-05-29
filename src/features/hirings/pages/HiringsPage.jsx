@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { fetchJobs, setPage } from '../store/hiringsSlice'
 import { detectJobRole } from '../utils/detectJobRole'
@@ -8,24 +8,41 @@ import Icon from '@/shared/components/AppIcon'
 import Button from '@/shared/components/ui/Button'
 
 const workflowState = {
-  completedPhases: ['/resume-upload', '/resume-analysis', '/manual-resume-editor', '/feedback-summary'],
+  completedPhases: [
+    '/resume-upload',
+    '/resume-analysis',
+    '/manual-resume-editor',
+    '/feedback-summary',
+  ],
   currentPhase: 'hirings',
 }
 
 function HiringsPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
-  const { overallScore, sectionFeedback, overallFeedback } = useAppSelector((state) => state.analysis)
-  const { jobs, totalResults, currentPage, status, error, detectedRole } = useAppSelector((state) => state.hirings)
+  const location = useLocation()
 
+  const { overallScore, sectionFeedback, overallFeedback } = useAppSelector(
+    (state) => state.analysis
+  )
+
+  const {
+    jobs,
+    totalResults,
+    currentPage,
+    status,
+    error,
+  } = useAppSelector((state) => state.hirings)
+
+  const effectiveScore = overallScore || location.state?.score || 0
   const role = detectJobRole(sectionFeedback, overallFeedback)
   const totalPages = Math.ceil(totalResults / 12)
 
   useEffect(() => {
-    if (overallScore >= 80 && role) {
+    if (effectiveScore >= 80 && role) {
       dispatch(fetchJobs({ role, page: currentPage }))
     }
-  }, [dispatch, role, overallScore, currentPage])
+  }, [dispatch, role, effectiveScore, currentPage])
 
   const handlePageChange = (newPage) => {
     dispatch(setPage(newPage))
@@ -33,33 +50,44 @@ function HiringsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // Score gate — below 80
-  if (overallScore < 80) {
+  if (effectiveScore < 80) {
     return (
       <div className="min-h-screen bg-background">
         <ProgressIndicator workflowState={workflowState} />
+
         <main className="container mx-auto flex min-h-[70vh] flex-col items-center justify-center px-4 py-16 text-center">
           <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
             <Icon name="Lock" size={36} className="text-muted-foreground" />
           </div>
+
           <h1 className="mb-3 text-3xl font-bold text-foreground">
             Job Listings Locked
           </h1>
+
           <p className="mb-2 max-w-md text-base text-muted-foreground">
-            You need a resume score of <span className="font-semibold text-foreground">80 or above</span> to access job listings.
+            You need a resume score of{' '}
+            <span className="font-semibold text-foreground">80 or above</span>{' '}
+            to access job listings.
           </p>
+
           <p className="mb-8 max-w-md text-sm text-muted-foreground">
             Your current score is{' '}
-            <span className={`font-bold text-lg ${overallScore >= 60 ? 'text-warning' : 'text-destructive'}`}>
-              {overallScore}
+            <span
+              className={`text-lg font-bold ${
+                effectiveScore >= 60 ? 'text-warning' : 'text-destructive'
+              }`}
+            >
+              {effectiveScore}
             </span>
             . Improve your resume and re-analyze to unlock this feature.
           </p>
-          <div className="flex flex-wrap gap-3 justify-center">
+
+          <div className="flex flex-wrap justify-center gap-3">
             <Button onClick={() => navigate('/manual-resume-editor')}>
               <Icon name="Edit3" size={16} />
               Improve Resume
             </Button>
+
             <Button variant="outline" onClick={() => navigate('/feedback-summary')}>
               View Feedback
             </Button>
@@ -76,39 +104,44 @@ function HiringsPage() {
       <main className="container mx-auto px-4 py-8 md:px-6 md:py-12 lg:px-8 lg:py-16">
         <div className="mx-auto max-w-7xl">
           <header className="mb-10 text-center">
-            <p className="mb-3 text-sm font-medium text-primary">Job Opportunities</p>
+            <p className="mb-3 text-sm font-medium text-primary">
+              Job Opportunities
+            </p>
+
             <h1 className="text-3xl font-bold text-foreground md:text-4xl lg:text-5xl">
               Hirings For You
             </h1>
+
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
               Based on your resume, we found jobs matching your profile as a{' '}
-              <span className="font-semibold text-foreground capitalize">{role}</span>.
+              <span className="font-semibold capitalize text-foreground">
+                {role || 'candidate'}
+              </span>
+              .
             </p>
           </header>
 
-          {/* Score badge */}
           <div className="mb-8 flex items-center justify-center gap-3">
             <div className="flex items-center gap-2 rounded-full border bg-success/10 px-4 py-2 text-sm font-medium text-success">
               <Icon name="CheckCircle" size={16} />
-              Resume Score: {overallScore}/100 — Unlocked
+              Resume Score: {effectiveScore}/100 — Unlocked
             </div>
           </div>
 
-          {/* Loading */}
           {status === 'loading' && (
             <div className="flex min-h-[40vh] items-center justify-center">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+                <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
                 <p className="text-muted-foreground">Finding jobs for you...</p>
               </div>
             </div>
           )}
 
-          {/* Error */}
           {status === 'failed' && (
             <div className="flex min-h-[40vh] items-center justify-center">
               <div className="text-center">
-                <p className="text-destructive mb-4">{error}</p>
+                <p className="mb-4 text-destructive">{error}</p>
+
                 <Button onClick={() => dispatch(fetchJobs({ role, page: currentPage }))}>
                   Try Again
                 </Button>
@@ -116,7 +149,6 @@ function HiringsPage() {
             </div>
           )}
 
-          {/* Jobs grid */}
           {status === 'succeeded' && (
             <>
               <p className="mb-6 text-sm text-muted-foreground">
@@ -126,9 +158,17 @@ function HiringsPage() {
               {jobs.length === 0 ? (
                 <div className="flex min-h-[40vh] items-center justify-center text-center">
                   <div>
-                    <Icon name="SearchX" size={48} className="mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-lg font-medium text-foreground">No jobs found</p>
-                    <p className="mt-2 text-sm text-muted-foreground">Try checking back later.</p>
+                    <Icon
+                      name="SearchX"
+                      size={48}
+                      className="mx-auto mb-4 text-muted-foreground"
+                    />
+                    <p className="text-lg font-medium text-foreground">
+                      No jobs found
+                    </p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Try checking back later.
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -139,7 +179,6 @@ function HiringsPage() {
                 </div>
               )}
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="mt-10 flex items-center justify-center gap-3">
                   <Button
@@ -150,9 +189,11 @@ function HiringsPage() {
                     <Icon name="ChevronLeft" size={16} />
                     Previous
                   </Button>
+
                   <span className="text-sm text-muted-foreground">
                     Page {currentPage} of {totalPages}
                   </span>
+
                   <Button
                     variant="outline"
                     disabled={currentPage === totalPages}
@@ -174,13 +215,16 @@ function HiringsPage() {
 function JobCard({ job }) {
   const formatDate = (dateString) => {
     if (!dateString) return 'Recently posted'
+
     const date = new Date(dateString)
     const now = new Date()
     const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24))
+
     if (diffDays === 0) return 'Today'
     if (diffDays === 1) return 'Yesterday'
     if (diffDays < 7) return `${diffDays} days ago`
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+
     return `${Math.floor(diffDays / 30)} months ago`
   }
 
@@ -190,12 +234,13 @@ function JobCard({ job }) {
         <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
           <Icon name="Briefcase" size={22} className="text-primary" />
         </div>
+
         <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
           {formatDate(job.postedDate)}
         </span>
       </div>
 
-      <h3 className="mb-1 text-base font-semibold text-foreground line-clamp-2">
+      <h3 className="mb-1 line-clamp-2 text-base font-semibold text-foreground">
         {job.title}
       </h3>
 
@@ -213,11 +258,11 @@ function JobCard({ job }) {
         </div>
       )}
 
-      <p className="mb-4 flex-1 text-xs leading-5 text-muted-foreground line-clamp-3">
+      <p className="mb-4 line-clamp-3 flex-1 text-xs leading-5 text-muted-foreground">
         {job.description}
       </p>
 
-        <a
+      <a
         href={job.url}
         target="_blank"
         rel="noopener noreferrer"

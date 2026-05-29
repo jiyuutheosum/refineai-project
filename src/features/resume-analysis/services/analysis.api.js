@@ -1,53 +1,95 @@
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { db, auth } from '@/lib/firebase'
 import { extractTextFromFile } from './textExtractor'
 import { analyzeResumeWithGemini } from './AIAnalysis'
 
-export async function runResumeAnalysis({ resumeId, file, uid }) {
-  if (!resumeId || !file || !uid) {
-    throw new Error('Missing required fields for analysis.')
+export async function runResumeAnalysis({ resumeId, file, uid, resumeText }) {
+  const user = auth.currentUser
+
+  if (!user) throw new Error('You must be logged in.')
+  if (!resumeId) {
+    throw new Error('Missing resume ID for analysis.')
   }
 
-  const resumeText = await extractTextFromFile(file)
+  const ownerUid = uid || user.uid
 
-  if (!resumeText || resumeText.length < 50) {
-    throw new Error('Could not extract text from resume. Make sure the file is not scanned or image-based.')
+  if (ownerUid !== user.uid) {
+    throw new Error('Access denied.')
   }
 
-  // Single call — returns both review and extracted sections
-  const analysis = await analyzeResumeWithGemini(resumeText)
+  const textToAnalyze = resumeText || (file ? await extractTextFromFile(file) : '')
+
+  if (!textToAnalyze || textToAnalyze.trim().length < 50) {
+    throw new Error(
+      'Could not extract enough resume text for analysis. Please upload a readable resume or save edited resume content first.'
+    )
+  }
+
+  const analysis = await analyzeResumeWithGemini(textToAnalyze)
 
   const feedbackId = `${resumeId}_feedback`
   const feedbackRef = doc(db, 'feedback', feedbackId)
 
   await setDoc(feedbackRef, {
-    uid,
+    uid: user.uid,
+    userId: user.uid,
     resumeId,
     feedbackId,
     overallScore: analysis.overallScore,
     overallFeedback: analysis.overallFeedback,
     sectionFeedback: analysis.sectionFeedback,
     extractedSections: analysis.extractedSections,
+    sourceText: textToAnalyze,
+    sourceType: resumeText ? 'manual_edit' : 'uploaded_file',
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   })
 
   const resumeRef = doc(db, 'resumes', resumeId)
+
   await setDoc(
     resumeRef,
     {
       analysisStatus: 'completed',
       overallScore: analysis.overallScore,
+      feedbackId,
+      lastAnalyzedFrom: resumeText ? 'manual_edit' : 'uploaded_file',
       updatedAt: serverTimestamp(),
     },
     { merge: true }
   )
 
-  return { feedbackId, ...analysis }
+  return {
+    feedbackId,
+    ...analysis,
+  }
 }
 
 export async function fetchAnalysisFromFirestore(resumeId) {
+  const user = auth.currentUser
+
+  if (!user) return null
+  if (!resumeId) return null
+
   const feedbackRef = doc(db, 'feedback', `${resumeId}_feedback`)
-  const snapshot = await getDoc(feedbackRef)
-  if (!snapshot.exists()) return null
-  return snapshot.data()
+
+  try {
+    const snapshot = await getDoc(feedbackRef)
+
+    if (!snapshot.exists()) return null
+
+    const feedback = snapshot.data()
+
+    if (feedback.uid !== user.uid && feedback.userId !== user.uid) {
+      return null
+    }
+
+    return feedback
+  } catch (error) {
+    if (error.code === 'permission-denied') {
+      return null
+    }
+
+    throw error
+  }
 }
