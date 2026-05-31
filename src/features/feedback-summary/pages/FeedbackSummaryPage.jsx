@@ -280,15 +280,26 @@ function FeedbackSummaryPage() {
 
               <div className="space-y-3">
                 {score >= 80 ? (
-                  <Button
-                    variant="default"
-                    onClick={() => navigate('/hirings', { state: { score } })}
-                    fullWidth
-                    className="bg-success hover:bg-success/90"
-                  >
-                    <Icon name="Briefcase" size={18} className="mr-2" />
-                    Proceed to Hirings
-                  </Button>
+                  <>
+                    <Button
+                      variant="default"
+                      onClick={() => navigate('/hirings', { state: { score } })}
+                      fullWidth
+                      className="bg-success hover:bg-success/90 text-white"
+                    >
+                      <Icon name="Briefcase" size={18} className="mr-2" />
+                      Proceed to Hirings
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/mock-interview')}
+                      fullWidth
+                    >
+                      <Icon name="MessageCircle" size={18} className="mr-2" />
+                      Practice Mock Interview
+                    </Button>
+                  </>
                 ) : (
                   <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
                     <Icon name="Lock" size={16} className="mr-2 inline" />
@@ -358,24 +369,32 @@ function getEducationalResources() {
       name: 'Use measurable achievements',
       description: 'Add numbers, percentages, scope, or outcomes to make your resume stronger.',
       icon: 'BarChart3',
+      type: 'article',
+      link: 'https://www.indeed.com/career-advice/resumes-cover-letters/how-to-quantify-resume-achievements',
     },
     {
       title: 'Improve action verbs',
       name: 'Improve action verbs',
       description: 'Start bullets with strong verbs like built, led, improved, created, or optimized.',
       icon: 'Zap',
+      type: 'article',
+      link: 'https://www.indeed.com/career-advice/resumes-cover-letters/action-verbs-for-resumes',
     },
     {
       title: 'Tailor your resume',
       name: 'Tailor your resume',
       description: 'Match your skills and experience to the job role you are targeting.',
       icon: 'Target',
+      type: 'article',
+      link: 'https://www.indeed.com/career-advice/resumes-cover-letters/how-to-tailor-your-resume',
     },
     {
       title: 'Keep formatting clean',
       name: 'Keep formatting clean',
       description: 'Use consistent spacing, sections, and readable formatting for ATS compatibility.',
       icon: 'Layout',
+      type: 'article',
+      link: 'https://www.indeed.com/career-advice/resumes-cover-letters/ats-friendly-resume-format',
     },
   ]
 }

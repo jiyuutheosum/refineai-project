@@ -1,0 +1,1 @@
+export { default as MockInterviewPage } from './pages/MockInterviewPage'

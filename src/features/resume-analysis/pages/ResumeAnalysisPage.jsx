@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { analyzeResume } from '../store/analysisSlice'
 import { setSummaryData } from '@/features/feedback-summary/store/feedbackSlice'
+import { loadUserResumes, updateResumeScore } from '@/features/my-resumes/store/myResumesSlice'
 import ProgressIndicator from '@/shared/components/feedback/ProgressIndicator'
 import Button from '@/shared/components/ui/Button'
 import Icon from '@/shared/components/AppIcon'
@@ -149,8 +150,20 @@ function ResumeAnalysisPage() {
   useEffect(() => {
     if (status === 'succeeded') {
       sessionStorage.removeItem('resumeReanalysisPayload')
+
+      if (isReanalysis) {
+        const resumeId = currentResume?.resumeId || currentResume?.id
+
+        // Optimistically update the score in the My Resumes list immediately
+        if (resumeId && overallScore) {
+          dispatch(updateResumeScore({ resumeId, overallScore: Number(overallScore) }))
+        }
+
+        // Force a fresh fetch from Firestore to ensure consistency
+        dispatch(loadUserResumes())
+      }
     }
-  }, [status])
+  }, [status, isReanalysis, dispatch, currentResume, overallScore])
 
   useEffect(() => {
     if (status !== 'succeeded') return

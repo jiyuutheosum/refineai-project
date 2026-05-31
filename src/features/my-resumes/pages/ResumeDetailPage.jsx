@@ -1,9 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { loadResumeDetail, clearSelectedResume } from '../store/myResumesSlice'
 import Icon from '@/shared/components/AppIcon'
 import Button from '@/shared/components/ui/Button'
+import { TemplatePreview } from '@/features/manual-resume-editor/components/TemplatePreview'
+import { exportResumeToReactPDF } from '@/features/manual-resume-editor/utils/exportResumeToReactPDF'
 
 function ResumeDetailPage() {
   const { resumeId } = useParams()
@@ -13,11 +15,14 @@ function ResumeDetailPage() {
   const { selectedResume, selectedFeedback, detailStatus, error } =
     useAppSelector((state) => state.myResumes)
 
+  // PDF Export state
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportMessage, setExportMessage] = useState(null) // { type: 'success'|'error', text: string }
+
   useEffect(() => {
     if (resumeId) {
       dispatch(loadResumeDetail(resumeId))
     }
-
     return () => {
       dispatch(clearSelectedResume())
     }
@@ -26,6 +31,11 @@ function ResumeDetailPage() {
   const score = selectedResume?.overallScore || selectedFeedback?.overallScore || 0
   const canViewHirings = score >= 80
   const isAnalyzed = Boolean(selectedFeedback)
+
+  // Show edited template preview when the user has previously saved manual edits
+  const hasManualEdits = Boolean(selectedResume?.hasManualEdits && selectedResume?.editedSections)
+  const editedSections = selectedResume?.editedSections ?? {}
+  const savedTemplate = selectedResume?.selectedTemplate ?? 'classic'
 
   const getScoreColor = (score) => {
     if (score >= 80) return 'text-success'
@@ -42,6 +52,47 @@ function ResumeDetailPage() {
     if (severity === 'high') return 'bg-destructive'
     if (severity === 'medium') return 'bg-warning'
     return 'bg-success'
+  }
+
+  const handleEditResume = () => {
+    navigate(`/my-resumes/${resumeId}/edit`, {
+      state: {
+        resume: selectedResume,
+        feedback: selectedFeedback,
+      },
+    })
+  }
+
+  const handleDownloadPDF = async () => {
+    if (!hasManualEdits) {
+      setExportMessage({ type: 'error', text: 'No edited resume available to export.' })
+      return
+    }
+
+    setIsExporting(true)
+    setExportMessage(null)
+
+    try {
+      await exportResumeToReactPDF({
+        resume: editedSections,
+        templateId: savedTemplate,
+        originalFileName: selectedResume.fileName || selectedResume.originalFileName || '',
+      })
+
+      setExportMessage({ type: 'success', text: 'PDF downloaded successfully.' })
+    } catch (err) {
+      setExportMessage({
+        type: 'error',
+        text: err?.message || 'Failed to generate PDF. Please try again.',
+      })
+    } finally {
+      setIsExporting(false)
+      setTimeout(() => {
+        setExportMessage((current) =>
+          current?.type === 'success' ? null : current
+        )
+      }, 3200)
+    }
   }
 
   if (detailStatus === 'loading') {
@@ -97,14 +148,22 @@ function ResumeDetailPage() {
             </div>
 
             <div className="ml-auto flex items-center gap-3">
-              {/* Edit Resume — only shown for analyzed resumes */}
               {isAnalyzed && (
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/my-resumes/${resumeId}/edit`)}
-                >
+                <Button variant="outline" onClick={handleEditResume}>
                   <Icon name="Pencil" size={16} />
                   Edit Resume
+                </Button>
+              )}
+
+              {hasManualEdits && (
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadPDF}
+                  disabled={isExporting}
+                  loading={isExporting}
+                >
+                  <Icon name="Download" size={16} />
+                  Download PDF
                 </Button>
               )}
 
@@ -124,7 +183,31 @@ function ResumeDetailPage() {
             </div>
           </div>
 
+          {/* Export status message */}
+          {exportMessage && (
+            <div
+              className={`mb-6 rounded-xl border px-4 py-3 text-sm flex items-center gap-2 ${
+                exportMessage.type === 'success'
+                  ? 'border-success/30 bg-success/10 text-success'
+                  : 'border-destructive/30 bg-destructive/10 text-destructive'
+              }`}
+            >
+              <Icon
+                name={exportMessage.type === 'success' ? 'CheckCircle2' : 'AlertCircle'}
+                size={16}
+              />
+              <span>{exportMessage.text}</span>
+              <button
+                onClick={() => setExportMessage(null)}
+                className="ml-auto text-xs underline opacity-70 hover:opacity-100"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
           <div className="grid gap-8 lg:grid-cols-2">
+            {/* Left: resume preview — shows edited template or original PDF */}
             <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
               <div className="flex items-center justify-between border-b px-5 py-4">
                 <div className="flex items-center gap-2">
@@ -132,20 +215,44 @@ function ResumeDetailPage() {
                   <span className="font-semibold text-foreground">
                     Resume Preview
                   </span>
+                  {hasManualEdits && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                      Edited
+                    </span>
+                  )}
                 </div>
 
-                <a
-                  href={selectedResume.downloadURL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <Icon name="ExternalLink" size={12} />
-                  Open in new tab
-                </a>
+                {/* Only show "Open original" link when showing the edited version */}
+                {hasManualEdits ? (
+                  <button
+                    onClick={() => window.open(selectedResume.downloadURL, '_blank')}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Icon name="ExternalLink" size={12} />
+                    View original
+                  </button>
+                ) : (
+                  <a
+                    href={selectedResume.downloadURL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <Icon name="ExternalLink" size={12} />
+                    Open in new tab
+                  </a>
+                )}
               </div>
 
-              {selectedResume.fileType === 'pdf' ? (
+              {hasManualEdits ? (
+                // Show the saved edited content in the chosen template
+                <div className="overflow-auto" style={{ height: '700px' }}>
+                  <TemplatePreview
+                    templateId={savedTemplate}
+                    resume={editedSections}
+                  />
+                </div>
+              ) : selectedResume.fileType === 'pdf' ? (
                 <iframe
                   src={`${selectedResume.downloadURL}#toolbar=0`}
                   className="w-full"
@@ -164,6 +271,7 @@ function ResumeDetailPage() {
               )}
             </div>
 
+            {/* Right: feedback */}
             <div className="space-y-5">
               {selectedFeedback?.overallFeedback && (
                 <div className="relative rounded-2xl border bg-card p-5 pr-36 shadow-sm">
@@ -253,6 +361,8 @@ function ResumeDetailPage() {
           </div>
         </div>
       </main>
+
+
     </div>
   )
 }

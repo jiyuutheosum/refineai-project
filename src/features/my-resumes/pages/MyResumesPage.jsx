@@ -23,6 +23,8 @@ function MyResumesPage() {
   const [notice, setNotice] = useState(null)
 
   useEffect(() => {
+    // Always fetch the latest data from Firestore when the page loads.
+    // This ensures that scores updated via re-analysis are reflected.
     dispatch(loadUserResumes())
   }, [dispatch])
 

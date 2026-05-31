@@ -8,6 +8,10 @@ import { resetAnalysis } from '@/features/resume-analysis/store/analysisSlice'
 import ProgressIndicator from '@/shared/components/feedback/ProgressIndicator'
 import Button from '@/shared/components/ui/Button'
 import Icon from '@/shared/components/AppIcon'
+import TemplatePicker from '../components/TemplatePicker'
+import { TemplatePreview } from '../components/TemplatePreview'
+import { exportResumeToReactPDF } from '../utils/exportResumeToReactPDF'
+import RichTextEditor from '../components/RichTextEditor'
 
 const workflowState = {
   completedPhases: ['upload', 'analysis'],
@@ -23,25 +27,37 @@ const emptyResume = {
   seminarsAndCertificates: '',
 }
 
+function toHtml(value) {
+  if (!value) return ''
+  if (value.trimStart().startsWith('<')) return value // already HTML
+  // Wrap each non-empty line in a <p> tag
+  return value
+    .split('\n')
+    .map((line) => (line.trim() ? `<p>${line}</p>` : '<p></p>'))
+    .join('')
+}
+
 function buildResumeText(resume) {
+  // Strip HTML tags for the plain-text version sent to re-analysis
+  const strip = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
   return `
 PERSONAL INFORMATION
-${resume.personalInfo}
+${strip(resume.personalInfo)}
 
 PROFESSIONAL SUMMARY
-${resume.summary}
+${strip(resume.summary)}
 
 WORK EXPERIENCE
-${resume.experience}
+${strip(resume.experience)}
 
 EDUCATION
-${resume.education}
+${strip(resume.education)}
 
 SKILLS
-${resume.skills}
+${strip(resume.skills)}
 
 SEMINARS & CERTIFICATES
-${resume.seminarsAndCertificates}
+${strip(resume.seminarsAndCertificates)}
   `.trim()
 }
 
@@ -50,68 +66,71 @@ function ManualResumeEditorPage() {
   const location = useLocation()
   const dispatch = useAppDispatch()
 
-  // Detect if we arrived from My Resumes (/my-resumes/:resumeId/edit)
   const fromMyResumes = location.pathname.startsWith('/my-resumes/')
+  const resumeFromState = location.state?.resume ?? null
+  const feedbackFromState = location.state?.feedback ?? null
+  const isScratch = location.state?.scratch === true
+  const scratchTemplate = location.state?.selectedTemplate
 
-  // Normal workflow sources
   const { sectionFeedback, extractedSections } = useAppSelector(
     (state) => state.analysis
   )
   const { currentResume } = useAppSelector((state) => state.resumeUpload)
 
-  // My Resumes sources
-  const { selectedResume, selectedFeedback } = useAppSelector(
-    (state) => state.myResumes
-  )
+  const activeResume = fromMyResumes ? resumeFromState : currentResume
+  const activeSectionFeedback = fromMyResumes
+    ? feedbackFromState?.sectionFeedback
+    : sectionFeedback
 
   const [resume, setResume] = useState(emptyResume)
+  const [selectedTemplate, setSelectedTemplate] = useState('classic')
   const [saveStatus, setSaveStatus] = useState('idle')
   const [message, setMessage] = useState(null)
 
+  // PDF Export (separate from save)
+  const [exportStatus, setExportStatus] = useState('idle') // 'idle' | 'loading' | 'success' | 'failed'
+
   useEffect(() => {
     if (fromMyResumes) {
-      // Prefer previously saved manual edits, fall back to original extracted sections
+      if (!resumeFromState) return
       const sections =
-        selectedResume?.editedSections ||
-        selectedResume?.extractedSections ||
+        resumeFromState.editedSections ||
+        resumeFromState.extractedSections ||
         null
-
       if (!sections) return
-
       setResume({
-        personalInfo: sections.personalInfo || '',
-        summary: sections.summary || '',
-        experience: sections.experience || '',
-        education: sections.education || '',
-        skills: sections.skills || '',
-        seminarsAndCertificates: sections.seminarsAndCertificates || '',
+        personalInfo: toHtml(sections.personalInfo || ''),
+        summary: toHtml(sections.summary || ''),
+        experience: toHtml(sections.experience || ''),
+        education: toHtml(sections.education || ''),
+        skills: toHtml(sections.skills || ''),
+        seminarsAndCertificates: toHtml(sections.seminarsAndCertificates || ''),
       })
+      // Restore previously chosen template if saved
+      if (resumeFromState.selectedTemplate) {
+        setSelectedTemplate(resumeFromState.selectedTemplate)
+      }
     } else {
       if (!extractedSections) return
-
       setResume({
-        personalInfo: extractedSections.personalInfo || '',
-        summary: extractedSections.summary || '',
-        experience: extractedSections.experience || '',
-        education: extractedSections.education || '',
-        skills: extractedSections.skills || '',
-        seminarsAndCertificates:
-          extractedSections.seminarsAndCertificates || '',
+        personalInfo: toHtml(extractedSections.personalInfo || ''),
+        summary: toHtml(extractedSections.summary || ''),
+        experience: toHtml(extractedSections.experience || ''),
+        education: toHtml(extractedSections.education || ''),
+        skills: toHtml(extractedSections.skills || ''),
+        seminarsAndCertificates: toHtml(extractedSections.seminarsAndCertificates || ''),
       })
     }
-  }, [fromMyResumes, extractedSections, selectedResume])
-
-  // Resolve the active resume record and its feedback for display/saving
-  const activeResume = fromMyResumes ? selectedResume : currentResume
-  const activeSectionFeedback = fromMyResumes
-    ? selectedFeedback?.sectionFeedback
-    : sectionFeedback
+  }, [fromMyResumes, resumeFromState, extractedSections])
 
   const editedResumeText = useMemo(() => buildResumeText(resume), [resume])
 
   const completionScore = useMemo(() => {
     const fields = Object.values(resume)
-    const filled = fields.filter((value) => value.trim().length > 0)
+    const filled = fields.filter((html) => {
+      const text = html.replace(/<[^>]*>/g, '').trim()
+      return text.length > 0
+    })
     return Math.round((filled.length / fields.length) * 100)
   }, [resume])
 
@@ -122,13 +141,10 @@ function ManualResumeEditorPage() {
 
   const getTipsForSection = (sectionName) => {
     if (!activeSectionFeedback || activeSectionFeedback.length === 0) return null
-
     const match = activeSectionFeedback.find((section) =>
       section.section?.toLowerCase().includes(sectionName.toLowerCase())
     )
-
     if (!match) return null
-
     return {
       feedback: match.feedback,
       suggestions: match.suggestions || [],
@@ -141,9 +157,15 @@ function ManualResumeEditorPage() {
   }
 
   const handleSave = async () => {
-    if (!activeResume) {
+    if (!activeResume && !isScratch) {
       showToast('error', 'No resume found to save.')
       return false
+    }
+
+    if (isScratch) {
+      setSaveStatus('succeeded')
+      showToast('success', 'Changes saved locally. Sign in and upload a resume later to analyze.')
+      return true
     }
 
     const resumeId = activeResume.resumeId || activeResume.id
@@ -159,8 +181,9 @@ function ManualResumeEditorPage() {
       await setDoc(
         doc(db, 'resumes', resumeId),
         {
-          editedSections: resume,
-          editedResumeText,
+          editedSections: resume,   // stores HTML
+          editedResumeText,         // plain text for re-analysis
+          selectedTemplate,
           hasManualEdits: true,
           analysisStatus: 'needs_reanalysis',
           updatedAt: serverTimestamp(),
@@ -194,7 +217,6 @@ function ManualResumeEditorPage() {
     )
 
     dispatch(resetAnalysis())
-
     navigate('/resume-analysis', { state: reanalysisPayload })
   }
 
@@ -202,6 +224,32 @@ function ManualResumeEditorPage() {
     const saved = await handleSave()
     if (!saved) return
     navigate('/feedback-summary')
+  }
+
+  const handleDownloadPDF = async () => {
+    setExportStatus('loading')
+
+    try {
+      const activeResumeName =
+        activeResume?.fileName ||
+        activeResume?.originalFileName ||
+        ''
+
+      await exportResumeToReactPDF({
+        resume,
+        templateId: selectedTemplate,
+        originalFileName: activeResumeName,
+      })
+
+      setExportStatus('success')
+      showToast('success', 'PDF downloaded successfully.')
+
+      setTimeout(() => setExportStatus('idle'), 1200)
+    } catch (err) {
+      setExportStatus('failed')
+      showToast('error', err?.message || 'Failed to export PDF.')
+      setTimeout(() => setExportStatus('idle'), 2000)
+    }
   }
 
   return (
@@ -232,14 +280,11 @@ function ManualResumeEditorPage() {
             <p className="mb-3 text-sm font-medium text-primary">
               Manual Resume Editor
             </p>
-
             <h1 className="text-3xl font-bold text-foreground md:text-4xl lg:text-5xl">
               Refine Your Resume
             </h1>
-
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-              Edit your resume content manually, save your changes, then
-              re-analyze it to recalibrate your score.
+              Pick a template, edit your content, then re-analyze to recalibrate your score.
             </p>
           </header>
 
@@ -255,6 +300,13 @@ function ManualResumeEditorPage() {
             </div>
           )}
 
+          {/* Template Picker */}
+          <TemplatePicker
+            selectedTemplate={selectedTemplate}
+            onSelect={setSelectedTemplate}
+          />
+
+          {/* Completion bar */}
           <section className="mb-8 rounded-2xl border bg-card p-5 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
@@ -265,7 +317,6 @@ function ManualResumeEditorPage() {
                   Save your changes before re-analyzing.
                 </p>
               </div>
-
               <div className="flex items-center gap-3">
                 <div className="h-2 w-36 overflow-hidden rounded-full bg-muted">
                   <div
@@ -280,87 +331,83 @@ function ManualResumeEditorPage() {
             </div>
           </section>
 
+          {/* Editor + Live Preview */}
           <section className="grid gap-8 lg:grid-cols-2">
+            {/* Left: rich text editor fields */}
             <div className="space-y-6">
               <EditorField
                 label="Personal Information"
                 value={resume.personalInfo}
-                onChange={(value) => handleChange('personalInfo', value)}
-                rows={4}
+                onChange={(val) => handleChange('personalInfo', val)}
+                placeholder="Full name, phone, email, address, LinkedIn..."
                 tips={getTipsForSection('contact')}
               />
-
               <EditorField
                 label="Professional Summary"
                 value={resume.summary}
-                onChange={(value) => handleChange('summary', value)}
-                rows={5}
+                onChange={(val) => handleChange('summary', val)}
+                placeholder="A brief summary of your skills and career goals..."
                 tips={getTipsForSection('summary')}
               />
-
               <EditorField
                 label="Work Experience"
                 value={resume.experience}
-                onChange={(value) => handleChange('experience', value)}
-                rows={10}
+                onChange={(val) => handleChange('experience', val)}
+                placeholder="Company, role, dates, responsibilities..."
+                minHeight={200}
                 tips={getTipsForSection('experience')}
               />
-
               <EditorField
                 label="Education"
                 value={resume.education}
-                onChange={(value) => handleChange('education', value)}
-                rows={5}
+                onChange={(val) => handleChange('education', val)}
+                placeholder="School, degree, year..."
                 tips={getTipsForSection('education')}
               />
-
               <EditorField
                 label="Skills"
                 value={resume.skills}
-                onChange={(value) => handleChange('skills', value)}
-                rows={4}
+                onChange={(val) => handleChange('skills', val)}
+                placeholder="Technical skills, tools, languages..."
                 tips={getTipsForSection('skills')}
               />
-
               <EditorField
                 label="Seminars & Certificates"
                 value={resume.seminarsAndCertificates}
-                onChange={(value) =>
-                  handleChange('seminarsAndCertificates', value)
-                }
-                rows={5}
+                onChange={(val) => handleChange('seminarsAndCertificates', val)}
+                placeholder="Certifications, training, workshops..."
               />
             </div>
 
-            <aside className="rounded-2xl border bg-card p-6 shadow-sm lg:sticky lg:top-8 lg:self-start">
-              <div className="mb-6 flex items-center justify-between gap-4">
+            {/* Right: live template preview */}
+            <aside className="rounded-2xl border bg-card shadow-sm lg:sticky lg:top-8 lg:self-start overflow-hidden">
+              <div className="flex items-center justify-between border-b px-5 py-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-card-foreground">
+                  <h2 className="text-base font-semibold text-card-foreground">
                     Live Preview
                   </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Preview how your updated resume content reads.
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Updates as you type
                   </p>
                 </div>
-                <Icon name="FileText" size={24} className="text-primary" />
+                <Icon name="FileText" size={20} className="text-primary" />
               </div>
 
-              <div className="space-y-5 rounded-xl bg-background p-5">
-                <PreviewSection
-                  title="Personal Info"
-                  content={resume.personalInfo}
-                />
-                <PreviewSection title="Summary" content={resume.summary} />
-                <PreviewSection title="Experience" content={resume.experience} />
-                <PreviewSection title="Education" content={resume.education} />
-                <PreviewSection title="Skills" content={resume.skills} />
-                <PreviewSection
-                  title="Seminars & Certificates"
-                  content={resume.seminarsAndCertificates}
-                />
+              <div className="overflow-auto max-h-[700px]">
+                <TemplatePreview templateId={selectedTemplate} resume={resume} />
               </div>
 
-              <div className="mt-8 flex flex-wrap justify-end gap-3">
+              <div className="border-t px-5 py-4 flex flex-wrap justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadPDF}
+                  disabled={exportStatus === 'loading' || saveStatus === 'loading'}
+                  loading={exportStatus === 'loading'}
+                >
+                  <Icon name="Download" size={17} />
+                  Download PDF
+                </Button>
+
                 <Button
                   variant="outline"
                   onClick={handleBackToAnalysis}
@@ -383,7 +430,7 @@ function ManualResumeEditorPage() {
                   {saveStatus === 'loading' ? 'Saving...' : 'Save Changes'}
                 </Button>
 
-                {!fromMyResumes && (
+                {!fromMyResumes && !isScratch && (
                   <Button
                     onClick={handleContinueToSummary}
                     disabled={saveStatus === 'loading'}
@@ -397,19 +444,20 @@ function ManualResumeEditorPage() {
           </section>
         </div>
       </main>
+
+
     </div>
   )
 }
 
-function EditorField({ label, value, onChange, rows = 5, tips = null }) {
+// ─── EditorField ──────────────────────────────────────────────────────────────
+function EditorField({ label, value, onChange, placeholder, minHeight = 160, tips = null }) {
   const [showTips, setShowTips] = useState(false)
 
   return (
     <div className="rounded-2xl border bg-card p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold text-card-foreground">
-          {label}
-        </span>
+        <span className="text-sm font-semibold text-card-foreground">{label}</span>
 
         {tips && (
           <button
@@ -433,7 +481,6 @@ function EditorField({ label, value, onChange, rows = 5, tips = null }) {
           <p className="text-xs leading-relaxed text-muted-foreground">
             {tips.feedback}
           </p>
-
           {tips.suggestions?.length > 0 && (
             <ul className="mt-2 space-y-1">
               {tips.suggestions.map((suggestion, index) => (
@@ -455,28 +502,13 @@ function EditorField({ label, value, onChange, rows = 5, tips = null }) {
         </div>
       )}
 
-      <textarea
+      <RichTextEditor
         value={value}
-        rows={rows}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm leading-6 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring"
+        onChange={onChange}
+        placeholder={placeholder}
+        minHeight={minHeight}
       />
     </div>
-  )
-}
-
-function PreviewSection({ title, content }) {
-  if (!content || content.trim().length === 0) return null
-
-  return (
-    <section>
-      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h3>
-      <p className="whitespace-pre-line text-sm leading-7 text-foreground">
-        {content}
-      </p>
-    </section>
   )
 }
 

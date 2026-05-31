@@ -56,6 +56,32 @@ const myResumesSlice = createSlice({
       state.selectedFeedback = null
       state.detailStatus = 'idle'
     },
+    updateResumeScore: (state, action) => {
+      const { resumeId, overallScore } = action.payload
+      if (!resumeId || !overallScore) return
+
+      // Update in the list
+      const updated = state.resumes.map((resume) => {
+        const id = resume.resumeId || resume.id
+        if (id === resumeId) {
+          return { ...resume, overallScore: Number(overallScore) }
+        }
+        return resume
+      })
+
+      state.resumes = updated
+
+      // Update selected resume if currently viewing it
+      if (state.selectedResume) {
+        const selectedId = state.selectedResume.resumeId || state.selectedResume.id
+        if (selectedId === resumeId) {
+          state.selectedResume = {
+            ...state.selectedResume,
+            overallScore: Number(overallScore),
+          }
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -117,6 +143,6 @@ const myResumesSlice = createSlice({
   },
 })
 
-export const { clearSelectedResume } = myResumesSlice.actions
+export const { clearSelectedResume, updateResumeScore } = myResumesSlice.actions
 
 export default myResumesSlice.reducer

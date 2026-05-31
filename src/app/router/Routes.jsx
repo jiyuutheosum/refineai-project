@@ -23,6 +23,7 @@ const FeedbackSummaryPage = lazy(() =>
   import('../../features/feedback-summary/pages/FeedbackSummaryPage')
 )
 const HiringsPage = lazy(() => import('../../features/hirings/pages/HiringsPage'))
+const MockInterviewPage = lazy(() => import('../../features/mock-interview/pages/MockInterviewPage'))
 const MyResumesPage = lazy(() =>
   import('../../features/my-resumes/pages/MyResumesPage')
 )
@@ -73,7 +74,7 @@ const WorkflowGuard = ({ step, children }) => {
     return <Navigate to="/" replace />
   }
 
-  if (step === 'editor' && !hasAnalysis) {
+  if (step === 'editor' && !hasAnalysis && !location.state?.scratch) {
     return <Navigate to="/" replace />
   }
 
@@ -145,6 +146,14 @@ const router = createBrowserRouter([
             <WorkflowGuard step="hirings">
               {withSuspense(HiringsPage)}
             </WorkflowGuard>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'mock-interview',
+        element: (
+          <ProtectedRoute>
+            {withSuspense(MockInterviewPage)}
           </ProtectedRoute>
         ),
       },
