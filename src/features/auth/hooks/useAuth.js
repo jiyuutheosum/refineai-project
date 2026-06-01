@@ -25,13 +25,20 @@ function useAuth() {
       setIsInitializing(false)
       
       if (firebaseUser) {
-        // Sync user to Redux store
+        // Determine if user signed in with Google
+        const isGoogleUser = firebaseUser.providerData.some(
+          (provider) => provider.providerId === 'google.com'
+        )
+
+        // Sync user to Redux store (include emailVerified status)
         dispatch(
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             displayName: firebaseUser.displayName,
             photoURL: firebaseUser.photoURL,
+            emailVerified: firebaseUser.emailVerified,
+            isGoogleUser,
           })
         )
       } else {

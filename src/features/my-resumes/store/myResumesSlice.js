@@ -69,6 +69,25 @@ const myResumesSlice = createSlice({
         resume.analysisStatus = 'completed'
       }
     },
+
+    updateResumeName: (state, action) => {
+      const { resumeId, fileName } = action.payload
+      if (!resumeId || !fileName) return
+
+      const resume = state.resumes.find(
+        (r) => (r.resumeId || r.id) === resumeId
+      )
+      if (resume) {
+        resume.fileName = fileName
+      }
+
+      if (
+        state.selectedResume &&
+        (state.selectedResume.resumeId || state.selectedResume.id) === resumeId
+      ) {
+        state.selectedResume.fileName = fileName
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -127,5 +146,5 @@ const myResumesSlice = createSlice({
   },
 })
 
-export const { clearSelectedResume, updateResumeScore } = myResumesSlice.actions
+export const { clearSelectedResume, updateResumeScore, updateResumeName } = myResumesSlice.actions
 export default myResumesSlice.reducer

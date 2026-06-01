@@ -12,11 +12,15 @@ export const loginWithGoogle = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const user = await signInWithGoogle()
+      const isGoogleUser = user.providerData.some(p => p.providerId === 'google.com')
+
       return {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        emailVerified: user.emailVerified,
+        isGoogleUser,
       }
     } catch (error) {
       return rejectWithValue(error.message)
@@ -29,11 +33,15 @@ export const loginWithEmail = createAsyncThunk(
   async ({ email, password }, { rejectWithValue }) => {
     try {
       const user = await signInWithEmail(email, password)
+      const isGoogleUser = user.providerData.some(p => p.providerId === 'google.com')
+
       return {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        emailVerified: user.emailVerified,
+        isGoogleUser,
       }
     } catch (error) {
       return rejectWithValue(error.message)
@@ -46,11 +54,15 @@ export const registerWithEmailAsync = createAsyncThunk(
   async ({ email, password, displayName }, { rejectWithValue }) => {
     try {
       const user = await registerWithEmail(email, password, displayName)
+      const isGoogleUser = user.providerData.some(p => p.providerId === 'google.com')
+
       return {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName || displayName,
         photoURL: user.photoURL,
+        emailVerified: user.emailVerified,
+        isGoogleUser,
       }
     } catch (error) {
       return rejectWithValue(error.message)

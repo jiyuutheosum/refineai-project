@@ -114,7 +114,7 @@ function FeedbackSummaryPage() {
   }
 
   const handleExport = (type, email) => {
-    console.log('Export requested:', { type, email })
+    // Export tracking could go to analytics here in the future
   }
 
   if (!hasAnalysis) {

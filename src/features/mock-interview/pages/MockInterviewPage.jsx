@@ -7,6 +7,7 @@ import ProgressIndicator from '@/shared/components/feedback/ProgressIndicator'
 import { generateMockInterviewQuestions, saveMockInterviewQuestions } from '../services/interview.api'
 import { getUserResumes } from '@/features/resume-upload/services/resumeUpload.api'
 import InterviewQuestionsList from '../components/InterviewQuestionsList'
+import { aiApi } from '@/lib/backendApi'
 
 const workflowState = {
   completedPhases: ['upload', 'analysis', 'editor', 'summary', 'hirings'],
@@ -20,8 +21,17 @@ function MockInterviewPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  const [aiUsage, setAiUsage] = useState(null)
+
   const user = useAppSelector((state) => state.auth.user)
   const location = useLocation()
+
+  // Fetch AI usage on load
+  useEffect(() => {
+    if (user) {
+      aiApi.getUsage().then(setAiUsage).catch(() => {})
+    }
+  }, [user])
 
   useEffect(() => {
     const loadResumes = async () => {
@@ -37,7 +47,7 @@ function MockInterviewPage() {
           setSelectedResumeId(preselectId)
         }
       } catch (err) {
-        console.error(err)
+        setError('Failed to load your resumes. Please refresh the page.')
       }
     }
     if (user) loadResumes()
@@ -117,7 +127,14 @@ function MockInterviewPage() {
 
           {/* Resume Selection */}
           <div className="mb-8 rounded-2xl border bg-card p-6">
-            <h2 className="text-lg font-semibold mb-4">Select a Resume</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Select a Resume</h2>
+              {aiUsage && (
+                <div className="text-xs text-muted-foreground">
+                  Mock interviews: {aiUsage.usage?.mockInterview || 0}/{aiUsage.limits?.mockInterview || 5} today
+                </div>
+              )}
+            </div>
             
             {resumes.length === 0 ? (
               <p className="text-muted-foreground">You don't have any analyzed resumes yet. Upload or build one first.</p>

@@ -4,6 +4,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
+  sendEmailVerification,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
@@ -67,6 +68,14 @@ export async function registerWithEmail(email, password, displayName) {
       photoURL: user.photoURL,
       createdAt: new Date().toISOString(),
     })
+
+    // Send email verification (important for AI features)
+    try {
+      await sendEmailVerification(user)
+    } catch (verificationError) {
+      console.warn('Failed to send verification email:', verificationError)
+      // Don't block registration if email sending fails
+    }
 
     return user
   } catch (error) {

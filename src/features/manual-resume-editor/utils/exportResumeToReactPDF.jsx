@@ -53,7 +53,7 @@ export async function exportResumeToReactPDF({
 
     return { success: true, filename };
   } catch (error) {
-    console.error('[exportResumeToReactPDF] Failed:', error);
+    // Consider sending to error monitoring (Sentry, etc.) in production
     throw new Error(
       error?.message || 'Failed to generate high-quality PDF. Please try again.'
     );

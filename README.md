@@ -76,6 +76,33 @@ Apply pattern to remaining features, add unit tests, real API integration, auth.
 
 Modern, scalable resume feedback platform ready for production.
 
+---
+
+## 🔒 Backend & Rate Limiting (NEW)
+
+A full **Node.js + Express** backend has been scaffolded under `/server` to:
+
+- Move all Groq/xAI calls server-side (keys no longer exposed in browser)
+- Implement **production-grade per-user rate limiting** using Firebase UID + Firestore + smart in-memory caching
+
+**Key protections (Free tier):**
+- 20 resume analyses / day
+- 5 mock interview generations / day
+- 100 total AI actions / day (global cap)
+
+**See full documentation:**
+- `/server/README.md`
+- `/server/src/middleware/rateLimiter.js`
+- `/server/src/services/usageTracker.js`
+
+**Next steps for frontend:**
+1. Stop using `groq-sdk` directly in browser (`dangerouslyAllowBrowser`)
+2. Call the new `/api/ai/*` endpoints and pass `Authorization: Bearer ${await auth.currentUser.getIdToken()}`
+3. Update `analysis.api.js` and `interview.api.js` to use axios + the backend
+
+This change is **mandatory** before going to production with real usage.
+
+
 ## 📋 Prerequisites
 
 - Node.js (v14.x or higher)

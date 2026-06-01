@@ -358,4 +358,80 @@ This project uses a mature feature-based architecture with good separation of co
 5. **Configuration** - Add environment variable handling (`.env` files)
 6. **Production features** - Add PWA configuration, CSRF/auth handling
 
+---
+
+## Latest Code Review - 2025-04-10
+
+**Auditor:** Senior Codebase Auditor (via `/codebase-auditor` skill)  
+**Review Scope:** Full codebase (src/ + server/)  
+**Overall Health:** **B+** (Improving rapidly — not yet production-ready)
+
+### Executive Summary
+RefineAI has made **substantial architectural progress** since the previous analysis, most notably the introduction of a dedicated Express backend (`/server`) and the successful migration of all AI generation (resume analysis + mock interviews) behind authenticated, per-user rate-limited endpoints using Firebase UID + Firestore.
+
+This was the single highest-leverage improvement for security and cost control. However, the project still carries significant technical debt from its original client-heavy design. The codebase now has a split personality: modern backend patterns alongside legacy direct Firestore writes and inconsistent error handling. Testing remains almost non-existent.
+
+### Key Findings by Severity
+
+#### Critical
+- **Residual risk of client-side AI key exposure** — While direct `groq-sdk` usage has been removed from active code, `VITE_GROQ_API_KEY` still exists in `.env` and commented code remains in `src/lib/groq.js`.
+- **Backend AI routes lack input validation** — Resume text and prompts are passed directly to Groq with minimal sanitization (`server/src/routes/ai.js`).
+- **Fragile Firebase Admin initialization** — `server/src/config/firebaseAdmin.js` has brittle fallback logic for service accounts that can fail silently or expose paths in production.
+
+#### High
+- **Inconsistent data access layer** — New `src/lib/backendApi.js` + `aiApi` helpers are excellent, but feature services still mix raw Firestore writes (`setDoc`, `getDocFromServer`) with backend calls.
+- **Scattered `console.*` statements** — 4 in frontend + 12 in backend (including in production paths).
+- **Brittle authorization logic** — `WorkflowGuard` in `Routes.jsx` relies heavily on Redux state + `location.state`, making it easy to bypass or get into invalid states.
+- **Non-distributed rate limiting cache** — The in-memory cache in `usageTracker.js` will not work correctly behind load balancers or multiple server instances.
+
+#### Medium
+- New backend capabilities (`/api/ai/usage`) are **not yet consumed** anywhere in the UI.
+- Extremely low test coverage (only 2 test files total).
+- Misleading file name: `AIAnalysis.js` no longer performs any AI calls.
+- No structured logging, metrics, or observability on the backend.
+- `server/` directory was added without updating root documentation or CI.
+
+#### Low
+- Minor code duplication and large component files (e.g. `ManualResumeEditorPage.jsx`).
+- Inconsistent use of `getDocFromServer` vs regular `getDoc`.
+- Dead/commented code in `lib/gemini.js`.
+
+### Recommended Immediate Actions (Prioritized)
+
+1. **Harden Backend AI Routes** (Critical)
+   - Add strict input validation and length limits on `resumeText` before sending to Groq.
+   - Consider prompt injection defenses.
+
+2. **Remove All `console.*` Calls** (High)
+   - Replace with a proper lightweight logger (or remove in production code paths).
+
+3. **Consume New Backend Usage Endpoint** (Medium)
+   - Wire `aiApi.getUsage()` into `MyResumesPage`, `ResumeDetailPage`, and `MockInterviewPage` so users can see their quotas.
+
+4. **Create a Thin Data Access Layer**
+   - Centralize all Firestore + backend calls instead of scattering them across feature services.
+
+5. **Improve Backend Observability**
+   - Add structured logging (e.g. Pino) and a basic `/metrics` or enhanced health endpoint.
+
+### Progress Since Previous Review
+
+**Major Wins:**
+- Full migration of AI calls to secure, rate-limited backend (`/api/ai/*`).
+- Creation of `src/lib/backendApi.js` with proper token injection and error handling.
+- `lib/groq.js` correctly deprecated for client-side use.
+- Extraction of `InterviewQuestionsList` component for reuse.
+- `saveMockInterviewQuestions` now persists data to resume documents.
+- Solid rate limiting implementation using Firebase UID + hybrid caching in Firestore.
+
+**Still Open:**
+- Most items from the original analysis (testing, centralized API layer on frontend, Redux optimization, etc.) remain relevant.
+
+---
+
+**Next Review Recommended Focus:**
+- Security hardening of backend prompt handling
+- End-to-end testing of the new rate limiting + backend flow
+- Full migration of Firestore writes for AI results behind the backend (optional but recommended)
+
 The current structure is functional and follows industry patterns. Key infrastructure like code splitting, lazy loading, and error boundaries are already implemented. The refactoring above would bring it to production-ready quality with better maintainability, performance, and developer experience.

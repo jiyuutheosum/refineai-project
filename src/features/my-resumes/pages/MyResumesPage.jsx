@@ -74,6 +74,12 @@ function MyResumesPage() {
             Pending
           </span>
         )
+      case 'needs_reanalysis':
+        return (
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            Needs Analysis
+          </span>
+        )
       case 'failed':
         return (
           <span className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">
@@ -215,14 +221,28 @@ function MyResumesPage() {
                   My Resumes
                 </h1>
                 <p className="mt-2 text-base text-muted-foreground">
-                  All your uploaded resumes and their analysis results.
+                  All your resumes — uploaded files and ones created manually from templates.
                 </p>
               </div>
 
-              <Button onClick={() => navigate('/')}>
-                <Icon name="Plus" size={16} />
-                Upload New
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    navigate('/manual-resume-editor', {
+                      state: { scratch: true },
+                    })
+                  }
+                >
+                  <Icon name="Edit3" size={16} />
+                  Create Manually
+                </Button>
+
+                <Button onClick={() => navigate('/')}>
+                  <Icon name="Plus" size={16} />
+                  Upload New
+                </Button>
+              </div>
             </div>
           </header>
 
@@ -289,7 +309,11 @@ function MyResumesPage() {
                     <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
                       <Icon
                         name={
-                          resume.fileType === 'pdf' ? 'FileText' : 'FileType'
+                          resume.fileType === 'manual'
+                            ? 'Edit3'
+                            : resume.fileType === 'pdf'
+                              ? 'FileText'
+                              : 'FileType'
                         }
                         size={24}
                         className="text-primary"
@@ -309,11 +333,18 @@ function MyResumesPage() {
 
                         <span className="flex items-center gap-1">
                           <Icon name="HardDrive" size={11} />
-                          {formatSize(resume.fileSize)}
+                          {resume.fileType === 'manual' ? '—' : formatSize(resume.fileSize)}
                         </span>
 
-                        <span className="font-medium uppercase">
-                          {resume.fileType}
+                        <span className="font-medium uppercase flex items-center gap-1">
+                          {resume.fileType === 'manual' ? (
+                            <>
+                              <Icon name="Edit3" size={11} />
+                              MANUAL
+                            </>
+                          ) : (
+                            resume.fileType
+                          )}
                         </span>
                       </div>
                     </div>

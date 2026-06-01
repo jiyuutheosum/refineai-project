@@ -20,7 +20,10 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     if (import.meta.env.DEV) {
-      console.error('Error caught by ErrorBoundary:', error, errorInfo)
+      if (import.meta.env.DEV) {
+        console.error('Error caught by ErrorBoundary:', error, errorInfo);
+      }
+      // TODO: Send to error monitoring service in production
     }
 
     window.__COMPONENT_ERROR__?.(error, errorInfo)

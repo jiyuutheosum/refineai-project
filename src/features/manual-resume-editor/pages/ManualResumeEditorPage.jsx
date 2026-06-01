@@ -4,13 +4,13 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { resetAnalysis } from '@/features/resume-analysis/store/analysisSlice'
+import { setCurrentResume } from '@/features/resume-upload/store/resumeUploadSlice'
 
 import ProgressIndicator from '@/shared/components/feedback/ProgressIndicator'
 import Button from '@/shared/components/ui/Button'
 import Icon from '@/shared/components/AppIcon'
 import TemplatePicker from '../components/TemplatePicker'
 import { TemplatePreview } from '../components/TemplatePreview'
-import { exportResumeToReactPDF } from '../utils/exportResumeToReactPDF'
 import RichTextEditor from '../components/RichTextEditor'
 
 const workflowState = {
@@ -29,8 +29,7 @@ const emptyResume = {
 
 function toHtml(value) {
   if (!value) return ''
-  if (value.trimStart().startsWith('<')) return value // already HTML
-  // Wrap each non-empty line in a <p> tag
+  if (value.trimStart().startsWith('<')) return value
   return value
     .split('\n')
     .map((line) => (line.trim() ? `<p>${line}</p>` : '<p></p>'))
@@ -38,7 +37,6 @@ function toHtml(value) {
 }
 
 function buildResumeText(resume) {
-  // Strip HTML tags for the plain-text version sent to re-analysis
   const strip = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
   return `
 PERSONAL INFORMATION
@@ -66,31 +64,45 @@ function ManualResumeEditorPage() {
   const location = useLocation()
   const dispatch = useAppDispatch()
 
+  // ── Entry point detection ─────────────────────────────────────────────────
   const fromMyResumes = location.pathname.startsWith('/my-resumes/')
+  const fromScratch = location.state?.scratch === true   // from "Choose a Template" on upload page
   const resumeFromState = location.state?.resume ?? null
   const feedbackFromState = location.state?.feedback ?? null
-  const isScratch = location.state?.scratch === true
-  const scratchTemplate = location.state?.selectedTemplate
 
+  // ── Redux sources (normal upload → analysis → editor flow) ───────────────
   const { sectionFeedback, extractedSections } = useAppSelector(
     (state) => state.analysis
   )
   const { currentResume } = useAppSelector((state) => state.resumeUpload)
+  const user = useAppSelector((state) => state.auth.user)
 
-  const activeResume = fromMyResumes ? resumeFromState : currentResume
+  // ── Resolve active resume + feedback based on entry point ─────────────────
+  // fromScratch: no resume yet — user is building from blank
+  // fromMyResumes: resume + feedback passed via location.state
+  // normal: currentResume from Redux
+  const activeResume = fromScratch ? null : fromMyResumes ? resumeFromState : currentResume
   const activeSectionFeedback = fromMyResumes
     ? feedbackFromState?.sectionFeedback
     : sectionFeedback
 
+  // ── State ─────────────────────────────────────────────────────────────────
   const [resume, setResume] = useState(emptyResume)
-  const [selectedTemplate, setSelectedTemplate] = useState('classic')
+  const [selectedTemplate, setSelectedTemplate] = useState(
+    location.state?.selectedTemplate ?? 'classic'
+  )
+  const [resumeName, setResumeName] = useState('Untitled Resume')
   const [saveStatus, setSaveStatus] = useState('idle')
   const [message, setMessage] = useState(null)
 
-  // PDF Export (separate from save)
-  const [exportStatus, setExportStatus] = useState('idle') // 'idle' | 'loading' | 'success' | 'failed'
-
+  // ── Pre-fill ──────────────────────────────────────────────────────────────
   useEffect(() => {
+    // fromScratch: always start empty — never read stale Redux state
+    if (fromScratch) {
+      setResume(emptyResume)
+      return
+    }
+
     if (fromMyResumes) {
       if (!resumeFromState) return
       const sections =
@@ -106,22 +118,23 @@ function ManualResumeEditorPage() {
         skills: toHtml(sections.skills || ''),
         seminarsAndCertificates: toHtml(sections.seminarsAndCertificates || ''),
       })
-      // Restore previously chosen template if saved
       if (resumeFromState.selectedTemplate) {
         setSelectedTemplate(resumeFromState.selectedTemplate)
       }
-    } else {
-      if (!extractedSections) return
-      setResume({
-        personalInfo: toHtml(extractedSections.personalInfo || ''),
-        summary: toHtml(extractedSections.summary || ''),
-        experience: toHtml(extractedSections.experience || ''),
-        education: toHtml(extractedSections.education || ''),
-        skills: toHtml(extractedSections.skills || ''),
-        seminarsAndCertificates: toHtml(extractedSections.seminarsAndCertificates || ''),
-      })
+      return
     }
-  }, [fromMyResumes, resumeFromState, extractedSections])
+
+    // Normal flow
+    if (!extractedSections) return
+    setResume({
+      personalInfo: toHtml(extractedSections.personalInfo || ''),
+      summary: toHtml(extractedSections.summary || ''),
+      experience: toHtml(extractedSections.experience || ''),
+      education: toHtml(extractedSections.education || ''),
+      skills: toHtml(extractedSections.skills || ''),
+      seminarsAndCertificates: toHtml(extractedSections.seminarsAndCertificates || ''),
+    })
+  }, [fromScratch, fromMyResumes, resumeFromState, extractedSections])
 
   const editedResumeText = useMemo(() => buildResumeText(resume), [resume])
 
@@ -157,19 +170,91 @@ function ManualResumeEditorPage() {
   }
 
   const handleSave = async () => {
-    if (!activeResume && !isScratch) {
+    // ========== NEW SCRATCH / TEMPLATE FLOW ==========
+    // When building from template, we now create a real resume document in Firestore
+    // so it appears in My Resumes and can be analyzed.
+    if (fromScratch) {
+      const hasContent = Object.values(resume).some(
+        (html) => html.replace(/<[^>]*>/g, '').trim().length > 0
+      )
+      if (!hasContent) {
+        showToast('error', 'Please fill in at least one section before saving.')
+        return false
+      }
+
+      if (!user?.uid) {
+        showToast('error', 'You must be logged in to save a resume.')
+        return false
+      }
+
+      try {
+        setSaveStatus('loading')
+
+        // Generate a resumeId (same pattern as file uploads)
+        const resumeId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+
+        const finalName = resumeName.trim() || 'Untitled Resume'
+
+        const newResumeData = {
+          uid: user.uid,
+          resumeId,
+          fileName: finalName,
+          originalFileName: finalName,
+          fileType: 'manual',
+          analysisStatus: 'needs_reanalysis',
+          editedSections: resume,
+          editedResumeText,
+          selectedTemplate,
+          hasManualEdits: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+
+        await setDoc(doc(db, 'resumes', resumeId), newResumeData)
+
+        // Create a resume object in the shape expected by the rest of the app
+        const createdResume = {
+          resumeId,
+          id: resumeId,
+          uid: user.uid,
+          fileName: finalName,
+          originalFileName: finalName,
+          fileType: 'manual',
+          analysisStatus: 'needs_reanalysis',
+        }
+
+        // Make it the current resume in Redux so analysis flow works
+        dispatch(setCurrentResume(createdResume))
+
+        setSaveStatus('succeeded')
+        showToast('success', 'Resume saved! Proceeding to analysis...')
+
+        // Automatically proceed to analysis (like the normal flow)
+        const analysisPayload = {
+          editedResumeText,
+          resume: createdResume,
+          reanalyze: true,
+        }
+
+        sessionStorage.setItem('resumeReanalysisPayload', JSON.stringify(analysisPayload))
+        dispatch(resetAnalysis())
+        navigate('/resume-analysis', { state: analysisPayload })
+
+        return true
+      } catch (error) {
+        setSaveStatus('failed')
+        showToast('error', error.message || 'Failed to save resume.')
+        return false
+      }
+    }
+    // ========== END SCRATCH FLOW ==========
+
+    if (!activeResume) {
       showToast('error', 'No resume found to save.')
       return false
     }
 
-    if (isScratch) {
-      setSaveStatus('succeeded')
-      showToast('success', 'Changes saved locally. Sign in and upload a resume later to analyze.')
-      return true
-    }
-
     const resumeId = activeResume.resumeId || activeResume.id
-
     if (!resumeId) {
       showToast('error', 'Resume ID is missing.')
       return false
@@ -177,12 +262,11 @@ function ManualResumeEditorPage() {
 
     try {
       setSaveStatus('loading')
-
       await setDoc(
         doc(db, 'resumes', resumeId),
         {
-          editedSections: resume,   // stores HTML
-          editedResumeText,         // plain text for re-analysis
+          editedSections: resume,
+          editedResumeText,
           selectedTemplate,
           hasManualEdits: true,
           analysisStatus: 'needs_reanalysis',
@@ -190,7 +274,6 @@ function ManualResumeEditorPage() {
         },
         { merge: true }
       )
-
       setSaveStatus('succeeded')
       showToast('success', 'Resume changes saved successfully.')
       return true
@@ -226,32 +309,6 @@ function ManualResumeEditorPage() {
     navigate('/feedback-summary')
   }
 
-  const handleDownloadPDF = async () => {
-    setExportStatus('loading')
-
-    try {
-      const activeResumeName =
-        activeResume?.fileName ||
-        activeResume?.originalFileName ||
-        ''
-
-      await exportResumeToReactPDF({
-        resume,
-        templateId: selectedTemplate,
-        originalFileName: activeResumeName,
-      })
-
-      setExportStatus('success')
-      showToast('success', 'PDF downloaded successfully.')
-
-      setTimeout(() => setExportStatus('idle'), 1200)
-    } catch (err) {
-      setExportStatus('failed')
-      showToast('error', err?.message || 'Failed to export PDF.')
-      setTimeout(() => setExportStatus('idle'), 2000)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <ProgressIndicator workflowState={workflowState} />
@@ -281,13 +338,30 @@ function ManualResumeEditorPage() {
               Manual Resume Editor
             </p>
             <h1 className="text-3xl font-bold text-foreground md:text-4xl lg:text-5xl">
-              Refine Your Resume
+              {fromScratch ? 'Build Your Resume from Template' : 'Refine Your Resume'}
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-              Pick a template, edit your content, then re-analyze to recalibrate your score.
+              {fromScratch
+                ? 'Fill in your details below. The live preview updates as you type.'
+                : 'Pick a template, edit your content, then re-analyze to recalibrate your score.'}
             </p>
           </header>
 
+          {/* Name input for scratch-created resumes */}
+          {fromScratch && (
+            <div className="mb-6 flex items-center gap-3">
+              <label className="text-sm font-medium text-muted-foreground">Resume Name:</label>
+              <input
+                type="text"
+                value={resumeName}
+                onChange={(e) => setResumeName(e.target.value || 'Untitled Resume')}
+                className="w-full max-w-md rounded-lg border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="My Professional Resume"
+              />
+            </div>
+          )}
+
+          {/* Show file banner only when editing an existing resume */}
           {activeResume && (
             <div className="mb-6 flex items-center gap-3 rounded-xl border bg-muted/40 px-5 py-3 text-sm text-muted-foreground">
               <Icon name="FileText" size={16} />
@@ -297,6 +371,14 @@ function ManualResumeEditorPage() {
                   {activeResume.fileName || activeResume.originalFileName}
                 </span>
               </span>
+            </div>
+          )}
+
+          {/* fromScratch banner */}
+          {fromScratch && (
+            <div className="mb-6 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-5 py-3 text-sm text-primary">
+              <Icon name="Edit3" size={16} />
+              <span>Building from scratch. Click <strong>Save &amp; Analyze</strong> when ready — your resume will be saved and analyzed automatically.</span>
             </div>
           )}
 
@@ -314,7 +396,9 @@ function ManualResumeEditorPage() {
                   Resume Completion
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Save your changes before re-analyzing.
+                  {fromScratch
+                    ? 'Fill in all sections for a complete resume.'
+                    : 'Save your changes before re-analyzing.'}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -333,7 +417,6 @@ function ManualResumeEditorPage() {
 
           {/* Editor + Live Preview */}
           <section className="grid gap-8 lg:grid-cols-2">
-            {/* Left: rich text editor fields */}
             <div className="space-y-6">
               <EditorField
                 label="Personal Information"
@@ -379,7 +462,6 @@ function ManualResumeEditorPage() {
               />
             </div>
 
-            {/* Right: live template preview */}
             <aside className="rounded-2xl border bg-card shadow-sm lg:sticky lg:top-8 lg:self-start overflow-hidden">
               <div className="flex items-center justify-between border-b px-5 py-4">
                 <div>
@@ -398,59 +480,72 @@ function ManualResumeEditorPage() {
               </div>
 
               <div className="border-t px-5 py-4 flex flex-wrap justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleDownloadPDF}
-                  disabled={exportStatus === 'loading' || saveStatus === 'loading'}
-                  loading={exportStatus === 'loading'}
-                >
-                  <Icon name="Download" size={17} />
-                  Download PDF
-                </Button>
+                {fromScratch ? (
+                  // Scratch / Template flow: Save creates a real resume and analyzes it
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/')}
+                    >
+                      <Icon name="ArrowLeft" size={18} />
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleSave}
+                      disabled={saveStatus === 'loading'}
+                    >
+                      <Icon
+                        name={saveStatus === 'loading' ? 'Loader2' : 'Save'}
+                        size={18}
+                        className={saveStatus === 'loading' ? 'animate-spin' : ''}
+                      />
+                      {saveStatus === 'loading' ? 'Saving & Analyzing...' : 'Save & Analyze'}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={handleBackToAnalysis}
+                      disabled={saveStatus === 'loading'}
+                    >
+                      <Icon name="ArrowLeft" size={18} />
+                      {fromMyResumes ? 'Save & Re-analyze' : 'Back to Analysis'}
+                    </Button>
 
-                <Button
-                  variant="outline"
-                  onClick={handleBackToAnalysis}
-                  disabled={saveStatus === 'loading'}
-                >
-                  <Icon name="ArrowLeft" size={18} />
-                  {fromMyResumes ? 'Save & Re-analyze' : 'Back to Analysis'}
-                </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleSave}
+                      disabled={saveStatus === 'loading'}
+                    >
+                      <Icon
+                        name={saveStatus === 'loading' ? 'Loader2' : 'Save'}
+                        size={18}
+                        className={saveStatus === 'loading' ? 'animate-spin' : ''}
+                      />
+                      {saveStatus === 'loading' ? 'Saving...' : 'Save Changes'}
+                    </Button>
 
-                <Button
-                  variant="outline"
-                  onClick={handleSave}
-                  disabled={saveStatus === 'loading'}
-                >
-                  <Icon
-                    name={saveStatus === 'loading' ? 'Loader2' : 'Save'}
-                    size={18}
-                    className={saveStatus === 'loading' ? 'animate-spin' : ''}
-                  />
-                  {saveStatus === 'loading' ? 'Saving...' : 'Save Changes'}
-                </Button>
-
-                {!fromMyResumes && !isScratch && (
-                  <Button
-                    onClick={handleContinueToSummary}
-                    disabled={saveStatus === 'loading'}
-                  >
-                    Continue to Summary
-                    <Icon name="ArrowRight" size={18} />
-                  </Button>
+                    {!fromMyResumes && (
+                      <Button
+                        onClick={handleContinueToSummary}
+                        disabled={saveStatus === 'loading'}
+                      >
+                        Continue to Summary
+                        <Icon name="ArrowRight" size={18} />
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </aside>
           </section>
         </div>
       </main>
-
-
     </div>
   )
 }
 
-// ─── EditorField ──────────────────────────────────────────────────────────────
 function EditorField({ label, value, onChange, placeholder, minHeight = 160, tips = null }) {
   const [showTips, setShowTips] = useState(false)
 

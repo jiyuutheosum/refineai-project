@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
-import { loadResumeDetail, clearSelectedResume } from '../store/myResumesSlice'
+import { loadResumeDetail, clearSelectedResume, updateResumeName } from '../store/myResumesSlice'
 import Icon from '@/shared/components/AppIcon'
 import Button from '@/shared/components/ui/Button'
 import { TemplatePreview } from '@/features/manual-resume-editor/components/TemplatePreview'
 import { exportResumeToReactPDF } from '@/features/manual-resume-editor/utils/exportResumeToReactPDF'
 import InterviewQuestionsList from '@/features/mock-interview/components/InterviewQuestionsList'
+import { aiApi } from '@/lib/backendApi'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 function ResumeDetailPage() {
   const { resumeId } = useParams()
@@ -20,10 +23,23 @@ function ResumeDetailPage() {
   const [isExporting, setIsExporting] = useState(false)
   const [exportMessage, setExportMessage] = useState(null) // { type: 'success'|'error', text: string }
 
+  // AI Usage (from backend rate limiter)
+  const [aiUsage, setAiUsage] = useState(null)
+
+  // Rename state (only for manual resumes)
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [newName, setNewName] = useState('')
+
   useEffect(() => {
     if (resumeId) {
       dispatch(loadResumeDetail(resumeId))
+
+      // Fetch current AI usage for this user (shows quota)
+      aiApi.getUsage()
+        .then(setAiUsage)
+        .catch(() => setAiUsage(null)) // Fail silently — not critical
     }
+
     return () => {
       dispatch(clearSelectedResume())
     }
@@ -101,6 +117,38 @@ function ResumeDetailPage() {
     }
   }
 
+  const handleStartRename = () => {
+    if (selectedResume.fileType !== 'manual') return
+    setNewName(selectedResume.fileName || '')
+    setIsRenaming(true)
+  }
+
+  const handleCancelRename = () => {
+    setIsRenaming(false)
+    setNewName('')
+  }
+
+  const handleSaveRename = async () => {
+    const trimmed = newName.trim()
+    if (!trimmed || trimmed === selectedResume.fileName) {
+      handleCancelRename()
+      return
+    }
+
+    try {
+      const resumeRef = doc(db, 'resumes', resumeId)
+      await setDoc(resumeRef, { fileName: trimmed, updatedAt: serverTimestamp() }, { merge: true })
+
+      // Update Redux so list + detail stay in sync
+      dispatch(updateResumeName({ resumeId, fileName: trimmed }))
+
+      setIsRenaming(false)
+      setNewName('')
+    } catch (err) {
+      console.error('Failed to rename resume:', err)
+    }
+  }
+
   if (detailStatus === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -137,20 +185,74 @@ function ResumeDetailPage() {
               Back
             </Button>
 
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                {selectedResume.fileName}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Uploaded{' '}
-                {new Date(
-                  selectedResume.uploadDate || selectedResume.createdAt
-                ).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </p>
+            <div className="flex items-center gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  {isRenaming ? (
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveRename()
+                        if (e.key === 'Escape') handleCancelRename()
+                      }}
+                      className="text-2xl font-bold bg-transparent border-b border-primary focus:outline-none"
+                      autoFocus
+                    />
+                  ) : (
+                    <h1 className="text-2xl font-bold text-foreground">
+                      {selectedResume.fileName}
+                    </h1>
+                  )}
+
+                  {selectedResume.fileType === 'manual' && (
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-primary">
+                      MANUAL
+                    </span>
+                  )}
+
+                  {selectedResume.fileType === 'manual' && !isRenaming && (
+                    <button
+                      onClick={handleStartRename}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      title="Rename resume"
+                    >
+                      <Icon name="Pencil" size={14} />
+                    </button>
+                  )}
+
+                  {isRenaming && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={handleSaveRename}
+                        className="text-success hover:text-success/80"
+                        title="Save name"
+                      >
+                        <Icon name="Check" size={16} />
+                      </button>
+                      <button
+                        onClick={handleCancelRename}
+                        className="text-destructive hover:text-destructive/80"
+                        title="Cancel"
+                      >
+                        <Icon name="X" size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  {selectedResume.fileType === 'manual' ? 'Created' : 'Uploaded'}{' '}
+                  {new Date(
+                    selectedResume.uploadDate || selectedResume.createdAt
+                  ).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
+              </div>
             </div>
 
             <div className="ml-auto flex items-center gap-3">
@@ -228,26 +330,28 @@ function ResumeDetailPage() {
                   )}
                 </div>
 
-                {/* Only show "Open original" link when showing the edited version */}
-                {hasManualEdits ? (
-                  <button
-                    onClick={() => window.open(selectedResume.downloadURL, '_blank')}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Icon name="ExternalLink" size={12} />
-                    View original
-                  </button>
-                ) : (
-                  <a
-                    href={selectedResume.downloadURL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-primary hover:underline"
-                  >
-                    <Icon name="ExternalLink" size={12} />
-                    Open in new tab
-                  </a>
-                )}
+                {/* Only show "Open original" link when there is actually an uploaded file */}
+                {selectedResume?.downloadURL ? (
+                  hasManualEdits ? (
+                    <button
+                      onClick={() => window.open(selectedResume.downloadURL, '_blank')}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <Icon name="ExternalLink" size={12} />
+                      View original
+                    </button>
+                  ) : (
+                    <a
+                      href={selectedResume.downloadURL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      <Icon name="ExternalLink" size={12} />
+                      Open in new tab
+                    </a>
+                  )
+                ) : null}
               </div>
 
               {hasManualEdits ? (
@@ -383,6 +487,13 @@ function ResumeDetailPage() {
                       ).toLocaleDateString()}</>
                     )}
                   </p>
+                )}
+
+                {aiUsage && (
+                  <div className="mt-2 text-[10px] text-muted-foreground">
+                    Today: {aiUsage.usage?.resumeAnalysis || 0}/{aiUsage.limits?.resumeAnalysis || 20} analyses • 
+                    {aiUsage.usage?.mockInterview || 0}/{aiUsage.limits?.mockInterview || 5} mock interviews
+                  </div>
                 )}
               </div>
 
