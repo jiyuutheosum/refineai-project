@@ -7,11 +7,13 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocFromServer,
   collection,
   query,
   where,
   orderBy,
   getDocs,
+  getDocsFromServer,
 } from 'firebase/firestore'
 import { storage, db, auth } from '@/lib/firebase'
 
@@ -118,7 +120,7 @@ export async function getUploadStatus(resumeId) {
   if (!resumeId) throw new Error('Valid resume ID is required.')
 
   const resumeDocRef = doc(db, 'resumes', resumeId)
-  const resumeDoc = await getDoc(resumeDocRef)
+  const resumeDoc = await getDocFromServer(resumeDocRef)
 
   if (!resumeDoc.exists()) throw new Error('Resume not found.')
 
@@ -139,7 +141,7 @@ export async function getUserResumes() {
     where('uid', '==', user.uid),
     orderBy('createdAt', 'desc')
   )
-  const querySnapshot = await getDocs(q)
+  const querySnapshot = await getDocsFromServer(q)
 
   return querySnapshot.docs.map((doc) => ({
     id: doc.id,

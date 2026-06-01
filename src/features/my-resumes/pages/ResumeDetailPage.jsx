@@ -6,6 +6,7 @@ import Icon from '@/shared/components/AppIcon'
 import Button from '@/shared/components/ui/Button'
 import { TemplatePreview } from '@/features/manual-resume-editor/components/TemplatePreview'
 import { exportResumeToReactPDF } from '@/features/manual-resume-editor/utils/exportResumeToReactPDF'
+import InterviewQuestionsList from '@/features/mock-interview/components/InterviewQuestionsList'
 
 function ResumeDetailPage() {
   const { resumeId } = useParams()
@@ -36,6 +37,11 @@ function ResumeDetailPage() {
   const hasManualEdits = Boolean(selectedResume?.hasManualEdits && selectedResume?.editedSections)
   const editedSections = selectedResume?.editedSections ?? {}
   const savedTemplate = selectedResume?.selectedTemplate ?? 'classic'
+
+  // Mock interview questions (persisted on the resume doc)
+  const mockQuestions = selectedResume?.mockQuestions || []
+  const hasMockQuestions = mockQuestions.length > 0
+  const mockGeneratedAt = selectedResume?.mockQuestionsGeneratedAt
 
   const getScoreColor = (score) => {
     if (score >= 80) return 'text-success'
@@ -358,6 +364,62 @@ function ResumeDetailPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Mock Interview Questions — saved per resume */}
+          <div className="mt-8 rounded-2xl border bg-card p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                  <Icon name="MessageCircle" size={20} className="text-primary" />
+                  Mock Interview Questions
+                </h2>
+                {hasMockQuestions && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {mockQuestions.length} tailored questions
+                    {mockGeneratedAt && (
+                      <> · Generated {new Date(
+                        mockGeneratedAt?.toDate ? mockGeneratedAt.toDate() : mockGeneratedAt
+                      ).toLocaleDateString()}</>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={() =>
+                  navigate('/mock-interview', {
+                    state: { preselectResumeId: resumeId },
+                  })
+                }
+              >
+                <Icon name="Play" size={16} className="mr-2" />
+                {hasMockQuestions ? 'Practice / Regenerate' : 'Open Mock Interview'}
+              </Button>
+            </div>
+
+            {hasMockQuestions ? (
+              <InterviewQuestionsList questions={mockQuestions} />
+            ) : (
+              <div className="rounded-xl border border-dashed bg-muted/30 p-8 text-center">
+                <Icon name="HelpCircle" size={32} className="mx-auto mb-3 text-muted-foreground/70" />
+                <p className="font-medium text-foreground mb-1">No mock questions yet for this resume</p>
+                <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
+                  Generate realistic behavioral, technical, and role-specific interview questions based on this resume's content and experience.
+                </p>
+                <Button
+                  onClick={() =>
+                    navigate('/mock-interview', {
+                      state: { preselectResumeId: resumeId },
+                    })
+                  }
+                >
+                  <Icon name="Sparkles" size={16} className="mr-2" />
+                  Generate Mock Interview Questions
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </main>

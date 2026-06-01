@@ -1,8 +1,3 @@
-/**
- * RichTextEditor.jsx
- * Reusable Tiptap-based rich text editor with formatting toolbar.
- * Stores content as HTML string, compatible with TemplatePreview.
- */
 import { useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'

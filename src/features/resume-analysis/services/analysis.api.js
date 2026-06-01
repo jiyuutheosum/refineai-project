@@ -1,4 +1,4 @@
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, getDocFromServer, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase'
 import { extractTextFromFile } from './textExtractor'
 import { analyzeResumeWithGemini } from './AIAnalysis'
@@ -74,7 +74,7 @@ export async function fetchAnalysisFromFirestore(resumeId) {
   const feedbackRef = doc(db, 'feedback', `${resumeId}_feedback`)
 
   try {
-    const snapshot = await getDoc(feedbackRef)
+    const snapshot = await getDocFromServer(feedbackRef)
 
     if (!snapshot.exists()) return null
 

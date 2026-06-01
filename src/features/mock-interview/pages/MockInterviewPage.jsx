@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useAppSelector } from '@/app/store/hooks'
+import { useLocation } from 'react-router-dom'
 import Button from '@/shared/components/ui/Button'
 import Icon from '@/shared/components/AppIcon'
 import ProgressIndicator from '@/shared/components/feedback/ProgressIndicator'
-import { generateMockInterviewQuestions } from '../services/interview.api'
+import { generateMockInterviewQuestions, saveMockInterviewQuestions } from '../services/interview.api'
 import { getUserResumes } from '@/features/resume-upload/services/resumeUpload.api'
+import InterviewQuestionsList from '../components/InterviewQuestionsList'
 
 const workflowState = {
   completedPhases: ['upload', 'analysis', 'editor', 'summary', 'hirings'],
@@ -17,21 +19,43 @@ function MockInterviewPage() {
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [expandedId, setExpandedId] = useState(null)
 
   const user = useAppSelector((state) => state.auth.user)
+  const location = useLocation()
 
   useEffect(() => {
     const loadResumes = async () => {
       try {
         const userResumes = await getUserResumes()
-        setResumes(userResumes.filter(r => r.analysisStatus === 'completed'))
+        const analyzed = userResumes.filter(r => r.analysisStatus === 'completed')
+        setResumes(analyzed)
+
+        // Support deep-link from My Resumes detail page
+        const preselectId = location.state?.preselectResumeId
+        if (preselectId) {
+          // Will be picked up by the selection effect below once resumes are set
+          setSelectedResumeId(preselectId)
+        }
       } catch (err) {
         console.error(err)
       }
     }
     if (user) loadResumes()
-  }, [user])
+  }, [user, location.state])
+
+  // When selected resume changes (incl. preselect or manual dropdown), auto-show any previously saved questions
+  useEffect(() => {
+    if (!selectedResumeId) {
+      setQuestions([])
+      return
+    }
+    const selected = resumes.find(r => (r.resumeId || r.id) === selectedResumeId)
+    if (selected?.mockQuestions?.length > 0) {
+      setQuestions(selected.mockQuestions)
+    } else {
+      setQuestions([])
+    }
+  }, [selectedResumeId, resumes])
 
   const handleGenerateQuestions = async () => {
     if (!selectedResumeId) return
@@ -41,7 +65,7 @@ function MockInterviewPage() {
 
     setLoading(true)
     setError(null)
-    setQuestions([])
+    // We intentionally do NOT clear questions here so the UI keeps previous until new ones arrive
 
     try {
       const resumeText = selectedResume.editedResumeText || 
@@ -53,23 +77,30 @@ function MockInterviewPage() {
       )
 
       setQuestions(generated)
+
+      // Persist so they appear in My Resumes detail view + future visits
+      await saveMockInterviewQuestions(selectedResumeId, generated)
+
+      // Update local resumes list so the "auto-load saved" effect + UI reflects immediately
+      setResumes(prev =>
+        prev.map(r => {
+          const id = r.resumeId || r.id
+          if (id === selectedResumeId) {
+            return {
+              ...r,
+              mockQuestions: generated,
+              mockQuestionsGeneratedAt: new Date().toISOString(),
+            }
+          }
+          return r
+        })
+      )
     } catch (err) {
       setError(err.message || 'Failed to generate interview questions. Please try again.')
     } finally {
       setLoading(false)
     }
   }
-
-  const toggleExpand = (id) => {
-    setExpandedId(expandedId === id ? null : id)
-  }
-
-  const groupedQuestions = questions.reduce((acc, q) => {
-    const category = q.category || 'General'
-    if (!acc[category]) acc[category] = []
-    acc[category].push(q)
-    return acc
-  }, {})
 
   return (
     <div className="min-h-screen bg-background">
@@ -114,7 +145,11 @@ function MockInterviewPage() {
                   disabled={!selectedResumeId || loading}
                   className="min-w-[160px]"
                 >
-                  {loading ? 'Generating...' : 'Generate Questions'}
+                  {loading 
+                    ? 'Generating...' 
+                    : (resumes.find(r => (r.resumeId || r.id) === selectedResumeId)?.mockQuestions?.length 
+                        ? 'Regenerate Questions' 
+                        : 'Generate Questions')}
                 </Button>
               </div>
             )}
@@ -131,70 +166,18 @@ function MockInterviewPage() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold">Interview Questions</h2>
-                <span className="text-sm text-muted-foreground">{questions.length} questions generated</span>
+                <span className="text-sm text-muted-foreground">{questions.length} questions</span>
               </div>
 
-              {Object.entries(groupedQuestions).map(([category, categoryQuestions]) => (
-                <div key={category} className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <span className="rounded-md bg-primary/10 px-2.5 py-1 text-sm text-primary">{category}</span>
-                  </h3>
-
-                  <div className="space-y-4">
-                    {categoryQuestions.map((q, index) => {
-                      const isExpanded = expandedId === q.id
-                      return (
-                        <div key={q.id || index} className="rounded-2xl border bg-card p-5">
-                          <button
-                            onClick={() => toggleExpand(q.id || index)}
-                            className="w-full text-left flex justify-between items-start gap-4"
-                          >
-                            <div className="flex-1">
-                              <p className="font-medium text-foreground pr-4">{q.question}</p>
-                            </div>
-                            <Icon 
-                              name={isExpanded ? "ChevronUp" : "ChevronDown"} 
-                              size={20} 
-                              className="text-muted-foreground mt-0.5 flex-shrink-0" 
-                            />
-                          </button>
-
-                          {isExpanded && (
-                            <div className="mt-4 border-t pt-4 space-y-4">
-                              {q.why_asked && (
-                                <div>
-                                  <p className="text-xs font-semibold text-muted-foreground mb-1">WHY THIS QUESTION?</p>
-                                  <p className="text-sm text-foreground">{q.why_asked}</p>
-                                </div>
-                              )}
-
-                              {q.suggested_talking_points?.length > 0 && (
-                                <div>
-                                  <p className="text-xs font-semibold text-muted-foreground mb-2">SUGGESTED TALKING POINTS</p>
-                                  <ul className="space-y-1.5 text-sm">
-                                    {q.suggested_talking_points.map((point, i) => (
-                                      <li key={i} className="flex gap-2">
-                                        <span className="text-primary mt-1">•</span>
-                                        <span>{point}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
+              <InterviewQuestionsList questions={questions} />
             </div>
           )}
 
           {questions.length === 0 && !loading && (
             <div className="text-center py-12 text-muted-foreground">
-              Select a resume above and click "Generate Questions" to get started.
+              {selectedResumeId 
+                ? 'Click "Generate Questions" (or Regenerate) to create and save tailored interview questions for this resume.'
+                : 'Select a resume above and click "Generate Questions" to get started.'}
             </div>
           )}
         </div>

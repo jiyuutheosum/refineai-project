@@ -1,4 +1,6 @@
 import { groqClient } from '@/lib/groq'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { db, auth } from '@/lib/firebase'
 
 export async function generateMockInterviewQuestions(resumeText, targetJobRole = '') {
   if (!resumeText || resumeText.trim().length < 100) {
@@ -67,4 +69,32 @@ Guidelines:
   } catch (e) {
     throw new Error('Failed to parse interview questions from AI response.')
   }
+}
+
+/**
+ * Persists generated mock interview questions to the resume document.
+ * Stored as `mockQuestions` + `mockQuestionsGeneratedAt` (denormalized for easy access via existing resume loads).
+ */
+export async function saveMockInterviewQuestions(resumeId, questions) {
+  if (!resumeId) {
+    throw new Error('Resume ID is required to save mock questions.')
+  }
+  if (!Array.isArray(questions) || questions.length === 0) {
+    return // nothing to save
+  }
+
+  const user = auth.currentUser
+  if (!user) throw new Error('You must be logged in to save mock interview questions.')
+
+  const resumeRef = doc(db, 'resumes', resumeId)
+
+  await setDoc(
+    resumeRef,
+    {
+      mockQuestions: questions,
+      mockQuestionsGeneratedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  )
 }

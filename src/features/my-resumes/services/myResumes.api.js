@@ -1,4 +1,4 @@
-import { doc, getDoc, deleteDoc } from 'firebase/firestore'
+import { doc, getDocFromServer, deleteDoc } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase'
 
 export async function fetchResumeWithFeedback(resumeId) {
@@ -8,7 +8,7 @@ export async function fetchResumeWithFeedback(resumeId) {
   if (!resumeId) throw new Error('Resume ID is required.')
 
   const resumeRef = doc(db, 'resumes', resumeId)
-  const resumeSnap = await getDoc(resumeRef)
+  const resumeSnap = await getDocFromServer(resumeRef)
 
   if (!resumeSnap.exists()) {
     throw new Error('Resume not found.')
@@ -29,7 +29,7 @@ export async function fetchResumeWithFeedback(resumeId) {
   let feedback = null
 
   try {
-    const feedbackSnap = await getDoc(feedbackRef)
+    const feedbackSnap = await getDocFromServer(feedbackRef)
 
     feedback = feedbackSnap.exists()
       ? {
@@ -51,7 +51,7 @@ export async function deleteResumeWithFeedback(resumeId) {
   if (!resumeId) throw new Error('Resume ID is required.')
 
   const resumeRef = doc(db, 'resumes', resumeId)
-  const resumeSnap = await getDoc(resumeRef)
+  const resumeSnap = await getDocFromServer(resumeRef)
 
   if (!resumeSnap.exists()) {
     throw new Error('Resume not found.')

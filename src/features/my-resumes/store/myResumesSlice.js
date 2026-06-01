@@ -56,30 +56,17 @@ const myResumesSlice = createSlice({
       state.selectedFeedback = null
       state.detailStatus = 'idle'
     },
+
+    // Optimistically update the score in the list immediately after re-analysis,
+    // before the loadUserResumes fetch completes
     updateResumeScore: (state, action) => {
       const { resumeId, overallScore } = action.payload
-      if (!resumeId || !overallScore) return
-
-      // Update in the list
-      const updated = state.resumes.map((resume) => {
-        const id = resume.resumeId || resume.id
-        if (id === resumeId) {
-          return { ...resume, overallScore: Number(overallScore) }
-        }
-        return resume
-      })
-
-      state.resumes = updated
-
-      // Update selected resume if currently viewing it
-      if (state.selectedResume) {
-        const selectedId = state.selectedResume.resumeId || state.selectedResume.id
-        if (selectedId === resumeId) {
-          state.selectedResume = {
-            ...state.selectedResume,
-            overallScore: Number(overallScore),
-          }
-        }
+      const resume = state.resumes.find(
+        (r) => (r.resumeId || r.id) === resumeId
+      )
+      if (resume) {
+        resume.overallScore = overallScore
+        resume.analysisStatus = 'completed'
       }
     },
   },
@@ -97,7 +84,6 @@ const myResumesSlice = createSlice({
         state.listStatus = 'failed'
         state.error = action.payload
       })
-
       .addCase(loadResumeDetail.pending, (state) => {
         state.detailStatus = 'loading'
         state.error = null
@@ -111,7 +97,6 @@ const myResumesSlice = createSlice({
         state.detailStatus = 'failed'
         state.error = action.payload
       })
-
       .addCase(deleteResume.pending, (state, action) => {
         state.deleteStatus = 'loading'
         state.deletingResumeId = action.meta.arg
@@ -124,7 +109,6 @@ const myResumesSlice = createSlice({
           const id = resume.resumeId || resume.id
           return id !== action.payload
         })
-
         if (
           state.selectedResume &&
           (state.selectedResume.resumeId === action.payload ||
@@ -144,5 +128,4 @@ const myResumesSlice = createSlice({
 })
 
 export const { clearSelectedResume, updateResumeScore } = myResumesSlice.actions
-
 export default myResumesSlice.reducer
