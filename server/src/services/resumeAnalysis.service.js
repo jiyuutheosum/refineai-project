@@ -14,9 +14,8 @@
  * - Easier to swap AI providers later
  */
 
-import Groq from 'groq-sdk';
+import Groq from "groq-sdk";
 
-// Server-side only Groq client
 let groq;
 
 export function getGroqClient() {
@@ -26,14 +25,12 @@ export function getGroqClient() {
     }
 
     groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY
+      apiKey: process.env.GROQ_API_KEY,
     });
   }
 
   return groq;
 }
-
-const groq = getGroqClient();
 
 /**
  * Validates and sanitizes resume text input.
