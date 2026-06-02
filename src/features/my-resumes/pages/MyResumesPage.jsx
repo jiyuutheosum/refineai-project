@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '@/app/store/hooks'
 import { loadUserResumes, deleteResume } from '../store/myResumesSlice'
 import Icon from '@/shared/components/AppIcon'
 import Button from '@/shared/components/ui/Button'
+import UsageQuota from '@/shared/components/UsageQuota'
 import { doc, getDoc, deleteDoc } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase'
 
@@ -223,6 +224,9 @@ function MyResumesPage() {
                 <p className="mt-2 text-base text-muted-foreground">
                   All your resumes — uploaded files and ones created manually from templates.
                 </p>
+                <div className="mt-3">
+                  <UsageQuota compact />
+                </div>
               </div>
 
               <div className="flex items-center gap-3">

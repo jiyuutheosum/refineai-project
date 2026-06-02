@@ -7,7 +7,7 @@ import ProgressIndicator from '@/shared/components/feedback/ProgressIndicator'
 import { generateMockInterviewQuestions, saveMockInterviewQuestions } from '../services/interview.api'
 import { getUserResumes } from '@/features/resume-upload/services/resumeUpload.api'
 import InterviewQuestionsList from '../components/InterviewQuestionsList'
-import { aiApi } from '@/lib/backendApi'
+import UsageQuota from '@/shared/components/UsageQuota'
 
 const workflowState = {
   completedPhases: ['upload', 'analysis', 'editor', 'summary', 'hirings'],
@@ -20,18 +20,10 @@ function MockInterviewPage() {
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-
-  const [aiUsage, setAiUsage] = useState(null)
+  const [currentUsage, setCurrentUsage] = useState(null)
 
   const user = useAppSelector((state) => state.auth.user)
   const location = useLocation()
-
-  // Fetch AI usage on load
-  useEffect(() => {
-    if (user) {
-      aiApi.getUsage().then(setAiUsage).catch(() => {})
-    }
-  }, [user])
 
   useEffect(() => {
     const loadResumes = async () => {
@@ -106,7 +98,11 @@ function MockInterviewPage() {
         })
       )
     } catch (err) {
-      setError(err.message || 'Failed to generate interview questions. Please try again.')
+      if (err.code === 'RATE_LIMIT_EXCEEDED' || err.status === 429) {
+        setError('You have reached your daily mock interview limit. Quota resets at midnight UTC.')
+      } else {
+        setError(err.message || 'Failed to generate interview questions. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -129,11 +125,7 @@ function MockInterviewPage() {
           <div className="mb-8 rounded-2xl border bg-card p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Select a Resume</h2>
-              {aiUsage && (
-                <div className="text-xs text-muted-foreground">
-                  Mock interviews: {aiUsage.usage?.mockInterview || 0}/{aiUsage.limits?.mockInterview || 5} today
-                </div>
-              )}
+              <UsageQuota compact onData={setCurrentUsage} />
             </div>
             
             {resumes.length === 0 ? (
@@ -159,14 +151,16 @@ function MockInterviewPage() {
                 </div>
                 <Button 
                   onClick={handleGenerateQuestions} 
-                  disabled={!selectedResumeId || loading}
+                  disabled={!selectedResumeId || loading || (currentUsage?.remaining?.mockInterview ?? 1) <= 0}
                   className="min-w-[160px]"
                 >
                   {loading 
                     ? 'Generating...' 
-                    : (resumes.find(r => (r.resumeId || r.id) === selectedResumeId)?.mockQuestions?.length 
-                        ? 'Regenerate Questions' 
-                        : 'Generate Questions')}
+                    : (currentUsage?.remaining?.mockInterview ?? 1) <= 0
+                      ? 'No mocks remaining today'
+                      : (resumes.find(r => (r.resumeId || r.id) === selectedResumeId)?.mockQuestions?.length 
+                          ? 'Regenerate Questions' 
+                          : 'Generate Questions')}
                 </Button>
               </div>
             )}

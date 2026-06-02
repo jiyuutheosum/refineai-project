@@ -34,14 +34,14 @@ function initializeFirebaseAdmin() {
     // Priority 1: Standard Google ADC (best for production on Google Cloud)
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       credential = admin.credential.applicationDefault();
-      console.log('✅ Firebase Admin initialized using GOOGLE_APPLICATION_CREDENTIALS (ADC)');
+      console.log('Firebase Admin initialized using GOOGLE_APPLICATION_CREDENTIALS (ADC)');
     }
 
     // Priority 2: Full service account JSON as environment variable (great for Render, Railway, Heroku, etc.)
     else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
       credential = admin.credential.cert(serviceAccount);
-      console.log('✅ Firebase Admin initialized using FIREBASE_SERVICE_ACCOUNT (from env variable)');
+      console.log('Firebase Admin initialized using FIREBASE_SERVICE_ACCOUNT (from env variable)');
     }
 
     // Priority 3: Path to service account key file (best for local development)
@@ -49,13 +49,13 @@ function initializeFirebaseAdmin() {
       const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
       const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
       credential = admin.credential.cert(serviceAccount);
-      console.log('✅ Firebase Admin initialized using FIREBASE_SERVICE_ACCOUNT_PATH');
+      console.log('Firebase Admin initialized using FIREBASE_SERVICE_ACCOUNT_PATH');
     }
 
     // Priority 4: Try Application Default Credentials anyway (works in many cloud environments)
     else {
       credential = admin.credential.applicationDefault();
-      console.log('✅ Firebase Admin initialized using Application Default Credentials (ADC)');
+      console.log('Firebase Admin initialized using Application Default Credentials (ADC)');
     }
 
     firebaseApp = admin.initializeApp({

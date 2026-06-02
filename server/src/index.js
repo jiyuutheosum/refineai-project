@@ -44,14 +44,6 @@ app.use(
 
 app.use(express.json({ limit: '2mb' })); // Resume text can be large
 
-// Request logging only in development
-if (process.env.NODE_ENV !== 'production') {
-  app.use((req, res, next) => {
-    console.log(`${req.method} ${req.path}`);
-    next();
-  });
-}
-
 // Health check (no auth)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -69,7 +61,7 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err); // Consider using a proper logger (pino, winston)
+  console.error('Unhandled error:', err); // error log (kept intentionally)
   res.status(500).json({
     error: 'InternalServerError',
     message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message,
@@ -81,10 +73,9 @@ app.use((err, req, res, next) => {
 // ============================================
 app.listen(PORT, () => {
   console.log(`
-   RefineAI Backend running on http://localhost:${PORT}
-   - AI routes: /api/ai/*
-   - Rate limiting: ACTIVE (Firestore + in-memory cache)
-   - Auth: Firebase ID tokens required on /api/ai/*
+  RefineAI Backend running
+  Port: ${PORT}
+  Environment: ${process.env.NODE_ENV || 'development'}
   `);
 });
 

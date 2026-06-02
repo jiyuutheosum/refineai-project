@@ -5,6 +5,7 @@ import FileStatus from '@/shared/components/feedback/FileStatus'
 import HelpContext from '@/shared/components/ui/HelpContext'
 import Button from '@/shared/components/ui/Button'
 import Icon from '@/shared/components/AppIcon'
+import UsageQuota from '@/shared/components/UsageQuota'
 
 import UploadZone from '@/features/resume-upload/components/UploadZone'
 import ValidationMessage from '@/features/resume-upload/components/ValidationMessage'
@@ -83,6 +84,10 @@ function ResumeUploadPage() {
               Get AI-powered educational feedback to improve your resume. Upload
               your file to begin the analysis process.
             </p>
+
+            <div className="mt-4 flex justify-center">
+              <UsageQuota compact />
+            </div>
           </header>
 
           {/* Prominent "Build from Scratch" option placed in the upper-middle area */}

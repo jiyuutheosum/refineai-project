@@ -1,188 +1,163 @@
-# RefineAI - Resume Feedback Platform
+# RefineAI - AI-Powered Resume Enhancement Platform
 
-Feature-first React 18 + Vite app with modular architecture for AI-powered resume analysis.
+**RefineAI** is a web application that leverages artificial intelligence to analyze resumes, provide actionable feedback on content and structure, and allows users to manually edit and improve their resumes with real-time comparison tools. It includes mock interview generation, job search integration, and per-user AI quotas.
+
+A dedicated Express backend (`/server`) proxies all AI calls (Groq) for security and enforces production-grade per-user rate limiting using Firebase UID + Firestore.
 
 ## 🛠️ Tech Stack
 
 | Category | Technologies |
 |----------|--------------|
-| Framework | React 18 + Vite |
-| State | Redux Toolkit (feature slices) |
-| Routing | React Router v6 |
-| Styling | TailwindCSS + CSS Tokens |
-| Forms | React Hook Form |
-| Animation | Framer Motion |
-| Charts | Recharts + D3.js |
-| Testing | Jest + RTL |
+| **Framework** | React 18 + Vite |
+| **Build Tool** | Vite 5 |
+| **State Management** | Redux Toolkit (feature slices) + React Redux |
+| **Routing** | React Router DOM v6 (`createBrowserRouter`, lazy + Suspense) |
+| **Styling** | Tailwind CSS 3 + CSS variables + class-variance-authority |
+| **Forms** | React Hook Form + schemas |
+| **Animations** | Framer Motion |
+| **Charts / Viz** | Recharts |
+| **Icons** | Lucide React |
+| **Client API / Auth** | Axios + Firebase (Auth + Firestore + Storage) |
+| **Backend** | Node.js + Express (AI proxy + rate limiting) |
+| **AI** | Groq (server-side only via `/api/ai/*`) |
+| **Other** | Radix UI primitives, React PDF Renderer, Tiptap (editor), date-fns |
+| **Testing** | Vitest + React Testing Library (manual testing primary) |
 
 ## 🏗️ Architecture
 
-**Feature-First Modular Design:**
+**Feature-First Modular Design** (self-contained features under `src/features/`):
 
-```
-src/
-├── app/              # App-wide setup only (router/store/providers/layouts)
-├── features/         # Self-contained domains
-│   └── resume-upload/
-│       ├── pages/
-│       ├── components/
-│       ├── hooks/
-│       ├── store/ (slice/selectors)
-│       ├── services/
-│       ├── utils/
-│       ├── schemas/
-│       └── constants/
-├── shared/           # Cross-feature reusables
-│   ├── components/ui/
-│   ├── lib/ (cn.js)
-│   └── hooks/
-└── styles/           # Globals + Tailwind + tokens
-```
+- `app/` — Only core config: router (Routes.jsx with lazy + WorkflowGuard + AuthGuard), providers, store (7 Redux slices, myResumes is primary for persisted data), layouts.
+- `features/` — Domain modules (auth, resume-upload, resume-analysis, my-resumes, manual-resume-editor, feedback-summary, mock-interview, hirings, not-found). Each typically has pages/, components/, hooks/, store/ (slice + selectors), services/, utils/, schemas/, constants/.
+- `shared/` — Cross-feature: components (ui/, layout/, feedback/, ErrorBoundary, UsageQuota, etc.), lib/cn.js.
+- `lib/` — Centralized: `backendApi.js` (axios instance + Firebase token injection + aiApi helpers for analyze/generate/getUsage), firebase.js.
+- `styles/` — Tailwind + globals + design tokens (CSS vars).
 
-**Rules:** app→features/shared, features→shared only. Thin pages, business logic in features.
+**Backend (`/server`)**: Express app with:
+- Auth middleware (Firebase ID token verification + optional email verified).
+- Rate limiting middleware + usageTracker (Firestore per-day docs + in-memory cache, tier-aware limits).
+- AI routes (`/api/ai/analyze-resume`, `/api/ai/generate-mock-interview`, `/api/ai/usage`) with input validation/sanitization and prompt hardening.
+- All expensive AI (Groq) happens server-side only.
+
+**Key patterns**:
+- All AI calls go through `aiApi` (secure, rate-limited).
+- Firebase for user data + auth; direct writes still exist in feature services alongside backend (see analysis for debt).
+- Usage quotas (`remaining` counts) exposed via `UsageQuota` component on upload, my-resumes, detail, and mock pages.
+- Lazy loading, error boundaries, React Hook Form + validation.
+
+See the full current structure and recommendations in `PROJECT_ANALYSIS.md`.
 
 ## 🚀 Quick Start
 
+**Prerequisites**: Node.js, npm. Firebase project + Groq key. Copy `.env` / `server/.env` and place `server/serviceAccountKey.json` (see `server/README.md` and `server/FIREBASE_SETUP.md`).
+
 ```bash
 npm install
-npm run start  # http://localhost:5170
-npm run build  # production
+
+# 1. Start the backend (required for AI + rate limiting + auth-protected endpoints)
+cd server
+npm run dev     # http://localhost:4000 (default)
+
+# 2. In another terminal: start the frontend
+cd ..
+npm start       # http://localhost:5173 (Vite default; see vite.config.js)
 ```
+
+- `npm run build` for production frontend.
+- Backend health: `GET http://localhost:4000/health`
+- Full AI usage/quotas require a logged-in Firebase user (the app enforces auth on protected routes).
 
 ## 📁 Features Implemented
 
-- **resume-upload**: Full workflow (validation, processing, Redux, auto-navigate)
-- **resume-analysis**: Components ready (ActionPanel, FeedbackCard, ResumePreview)
-- **manual-resume-editor**: Editor tools (SectionEditor, FeedbackSidebar)
-- **feedback-summary**: Charts (ScoreCard, SectionBreakdown)
+- **auth**: Email/password + Google sign-in, email verification modal/guard, protected routes.
+- **resume-upload**: Drag/drop or manual, validation, PDF/DOCX text extraction, triggers backend AI analysis.
+- **resume-analysis**: Calls secure backend, displays overall score + section feedback.
+- **my-resumes**: List of all user resumes (uploaded + manual), detail view with re-analysis, PDF export of manual edits, mock questions per-resume, AI quota display.
+- **manual-resume-editor**: Tiptap rich-text editor, templates (classic/modern/etc), live comparison, section editing, save to Firestore (marks for re-analysis).
+- **feedback-summary**: Visual breakdown (Recharts), overall + section scores, priority actions, export options.
+- **mock-interview**: Select resume → generate tailored questions via backend (persisted on resume doc), practice view with `InterviewQuestionsList`.
+- **hirings**: Adzuna job search integration (role detection from resume).
+- **not-found**: 404 page.
+
+**Backend-powered**:
+- Resume analysis (20/day free)
+- Mock interview generation (5/day free)
+- Global AI action cap (100/day)
+- Real-time quota/remaining display via `UsageQuota` component + `/api/ai/usage`
 
 ## 🧩 Extending Features
 
-1. Create `features/[new-feature]/pages/[Name]Page.jsx` (thin)
-2. Add `store/[name]Slice.js/selectors.js`
-3. Business logic in `hooks/services/utils/`
-4. Add route in `app/router/Routes.jsx`
-5. Update `app/store/index.js` reducer
+1. Create `features/[new-feature]/pages/[Name]Page.jsx` (thin page).
+2. Add feature slice under `features/.../store/` + register in `app/store/index.js`.
+3. Business logic in `hooks/`, `services/`, `utils/`.
+4. Add protected route in `app/router/Routes.jsx` (use `ProtectedRoute` + optional `WorkflowGuard`).
+5. For AI features: use `aiApi` from `@/lib/backendApi` (never call Groq client-side).
 
-## 🎨 Customization
+See `PROJECT_ANALYSIS.md` (Latest Code Review) for architecture details, open items, and refactoring guidance. Backend routes live in `server/src/routes/ai.js`.
 
-- **Tailwind**: Edit `tailwind.config.js`, tokens in `styles/globals.css`
-- **Theme**: CSS vars in `:root` (light/dark)
-- **Routes**: `app/router/Routes.jsx`
+## 🔒 Backend, Rate Limiting & Quotas
 
-## 📊 Upcoming
+A full **Node.js + Express** backend powers all AI:
 
-Apply pattern to remaining features, add unit tests, real API integration, auth.
+- Secure proxy: No Groq keys or direct SDK calls in the browser (`src/lib/groq.js` is a safe stub; `VITE_GROQ_API_KEY` removed from client `.env`).
+- Rate limiting: Per-Firebase-UID daily limits (enforced on every AI call). Hybrid cache (Firestore source-of-truth + in-memory).
+- Usage visibility: `aiApi.getUsage()` + `<UsageQuota />` component shows remaining analyses / mock interviews on key pages. Buttons can be disabled when quota is 0. Rate limit errors are surfaced nicely (429 handling in backendApi).
+- Validation: Resume text length + basic prompt-injection redaction on the server before Groq.
 
-Modern, scalable resume feedback platform ready for production.
+**Free tier defaults** (see `server/src/utils/rateLimitConfig.js`):
+- 20 resume analyses / day
+- 5 mock interview generations / day
+- 100 total AI actions / day (global safety cap)
+
+**See**:
+- `server/README.md` and `server/FIREBASE_SETUP.md` for setup (service account, env vars).
+- `src/lib/backendApi.js` (the aiApi wrapper + interceptors).
+- `server/src/middleware/rateLimiter.js`, `usageTracker.js`, `routes/ai.js`.
+
+The frontend integration (calls + quota UI) is complete. Recent cleanup also removed random dev request logging while keeping error + startup logs.
 
 ---
 
-## 🔒 Backend & Rate Limiting (NEW)
+## 📋 Prerequisites & Environment
 
-A full **Node.js + Express** backend has been scaffolded under `/server` to:
+- Node.js (v18+ recommended)
+- Firebase project (Auth + Firestore + Storage enabled)
+- Groq API key (stored **only** in `server/.env` as `GROQ_API_KEY`)
+- For local: `server/serviceAccountKey.json` (gitignored) or `FIREBASE_SERVICE_ACCOUNT_PATH`
 
-- Move all Groq/xAI calls server-side (keys no longer exposed in browser)
-- Implement **production-grade per-user rate limiting** using Firebase UID + Firestore + smart in-memory caching
+Copy and fill:
+- Root `.env` (Firebase web config + `VITE_BACKEND_URL=http://localhost:4000`)
+- `server/.env` (from `server/.env.example`)
 
-**Key protections (Free tier):**
-- 20 resume analyses / day
-- 5 mock interview generations / day
-- 100 total AI actions / day (global cap)
-
-**See full documentation:**
-- `/server/README.md`
-- `/server/src/middleware/rateLimiter.js`
-- `/server/src/services/usageTracker.js`
-
-**Next steps for frontend:**
-1. Stop using `groq-sdk` directly in browser (`dangerouslyAllowBrowser`)
-2. Call the new `/api/ai/*` endpoints and pass `Authorization: Bearer ${await auth.currentUser.getIdToken()}`
-3. Update `analysis.api.js` and `interview.api.js` to use axios + the backend
-
-This change is **mandatory** before going to production with real usage.
+Never commit keys or service account files. See `PROJECT_ANALYSIS.md` for security notes.
 
 
-## 📋 Prerequisites
+## 📁 Project Structure (Current)
 
-- Node.js (v14.x or higher)
-- npm or yarn
+See the detailed tree and explanations in `PROJECT_ANALYSIS.md` (section 3 and the "Latest Code Review").
 
-## 🛠️ Installation
+High level:
+- `src/app/` — router, store, providers, MainLayout
+- `src/features/*` — self-contained feature folders (see list above)
+- `src/shared/components/` + `src/lib/` — shared UI + `backendApi.js`
+- `server/src/` — Express routes, middleware (auth + rateLimiter), services (usageTracker, resumeAnalysis, mockInterview), config (firebaseAdmin)
 
-1. Install dependencies:
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
-   
-2. Start the development server:
-   ```bash
-   npm start
-   # or
-   yarn start
-   ```
+## 🎨 Customization & Theming
 
-## 📁 Project Structure
+- Tailwind + CSS variables (see `styles/globals.css`, `tailwind.config.js`).
+- Theme tokens for primary, success, destructive, etc.
+- Edit `app/router/Routes.jsx` for routes (lazy-loaded, wrapped with `ProtectedRoute` / `WorkflowGuard`).
+- Shared UI primitives in `src/shared/components/ui/`.
 
-```
-react_app/
-├── public/             # Static assets
-├── client/src/
-│   ├── components/     # Reusable UI components
-│   ├── pages/          # Page components
-│   ├── styles/         # Global styles and Tailwind configuration
-│   ├── App.jsx         # Main application component
-│   ├── Routes.jsx      # Application routes
-│   └── index.jsx       # Application entry point
-├── .env                # Environment variables
-├── index.html          # HTML template
-├── package.json        # Project dependencies and scripts
-├── tailwind.config.js  # Tailwind CSS configuration
-└── vite.config.js      # Vite configuration
-```
+The app is fully responsive via Tailwind breakpoints.
 
-## 🧩 Adding Routes
+## 📦 Development & Deployment Notes
 
-To add new routes to the application, update the `Routes.jsx` file:
+- **Frontend dev**: `npm start` (Vite on 5173).
+- **Backend dev**: `cd server && npm run dev` (or `npm run start`).
+- **Build**: `npm run build` (outputs to `dist/`).
+- **Preview**: `npm run serve`.
+- Production requires proper Firebase rules, server env vars / secrets for the Express app, and the Vite `VITE_BACKEND_URL` pointing at your deployed backend.
+- See `PROJECT_ANALYSIS.md` (Latest Code Review - 2025-04-10 and updates) for health, open items (data layer unification, observability, etc.), and security recommendations. Recent work includes quota UI (`UsageQuota`), client AI key cleanup, and removal of random dev console logs (kept errors + startup).
 
-```jsx
-import { useRoutes } from "react-router-dom";
-import HomePage from "pages/HomePage";
-import AboutPage from "pages/AboutPage";
-
-const ProjectRoutes = () => {
-  let element = useRoutes([
-    { path: "/", element: <HomePage /> },
-    { path: "/about", element: <AboutPage /> },
-    // Add more routes as needed
-  ]);
-
-  return element;
-};
-```
-
-## 🎨 Styling
-
-This project uses Tailwind CSS for styling. The configuration includes:
-
-- Forms plugin for form styling
-- Typography plugin for text styling
-- Aspect ratio plugin for responsive elements
-- Container queries for component-specific responsive design
-- Fluid typography for responsive text
-- Animation utilities
-
-## 📱 Responsive Design
-
-The app is built with responsive design using Tailwind CSS breakpoints.
-
-
-## 📦 Deployment
-
-Build the application for production:
-
-```bash
-npm run build
-```
+For backend-specific setup, read `server/README.md`.

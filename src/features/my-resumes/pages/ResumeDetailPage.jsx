@@ -7,7 +7,7 @@ import Button from '@/shared/components/ui/Button'
 import { TemplatePreview } from '@/features/manual-resume-editor/components/TemplatePreview'
 import { exportResumeToReactPDF } from '@/features/manual-resume-editor/utils/exportResumeToReactPDF'
 import InterviewQuestionsList from '@/features/mock-interview/components/InterviewQuestionsList'
-import { aiApi } from '@/lib/backendApi'
+import UsageQuota from '@/shared/components/UsageQuota'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
@@ -23,9 +23,6 @@ function ResumeDetailPage() {
   const [isExporting, setIsExporting] = useState(false)
   const [exportMessage, setExportMessage] = useState(null) // { type: 'success'|'error', text: string }
 
-  // AI Usage (from backend rate limiter)
-  const [aiUsage, setAiUsage] = useState(null)
-
   // Rename state (only for manual resumes)
   const [isRenaming, setIsRenaming] = useState(false)
   const [newName, setNewName] = useState('')
@@ -33,11 +30,6 @@ function ResumeDetailPage() {
   useEffect(() => {
     if (resumeId) {
       dispatch(loadResumeDetail(resumeId))
-
-      // Fetch current AI usage for this user (shows quota)
-      aiApi.getUsage()
-        .then(setAiUsage)
-        .catch(() => setAiUsage(null)) // Fail silently — not critical
     }
 
     return () => {
@@ -252,6 +244,8 @@ function ResumeDetailPage() {
                     day: 'numeric',
                   })}
                 </p>
+
+                <UsageQuota compact className="mt-2" />
               </div>
             </div>
 
@@ -487,13 +481,6 @@ function ResumeDetailPage() {
                       ).toLocaleDateString()}</>
                     )}
                   </p>
-                )}
-
-                {aiUsage && (
-                  <div className="mt-2 text-[10px] text-muted-foreground">
-                    Today: {aiUsage.usage?.resumeAnalysis || 0}/{aiUsage.limits?.resumeAnalysis || 20} analyses • 
-                    {aiUsage.usage?.mockInterview || 0}/{aiUsage.limits?.mockInterview || 5} mock interviews
-                  </div>
                 )}
               </div>
 
