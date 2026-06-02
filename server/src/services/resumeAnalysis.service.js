@@ -17,9 +17,23 @@
 import Groq from 'groq-sdk';
 
 // Server-side only Groq client
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY,
-});
+let groq;
+
+export function getGroqClient() {
+  if (!groq) {
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error("Missing GROQ_API_KEY");
+    }
+
+    groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY
+    });
+  }
+
+  return groq;
+}
+
+const groq = getGroqClient();
 
 /**
  * Validates and sanitizes resume text input.
