@@ -41,10 +41,6 @@ FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
 
 ### For Production / Other Platforms (Render, Railway, etc.)
 
-Many platforms don't allow uploading files easily. In that case, use this instead:
-
-```env
-FIREBASE_SERVICE_ACCOUNT={"type":"service_account","project_id":"refine-ai-project", ...}
 ```
 
 (Paste the entire content of your `serviceAccountKey.json` as a single line)
